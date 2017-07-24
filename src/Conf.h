@@ -1,0 +1,221 @@
+/*
+ * predixy - A high performance and full features proxy for redis.
+ * Copyright (C) 2017 Joyield, Inc. <joyield.com@gmail.com>
+ * All rights reserved.
+ */
+
+#ifndef _PREDIXY_CONF_H_
+#define _PREDIXY_CONF_H_
+
+#include <limits.h>
+#include <string.h>
+#include <strings.h>
+#include <string>
+#include <map>
+#include <set>
+#include <vector>
+#include <bitset>
+#include "Predixy.h"
+#include "Distribution.h"
+#include "ConfParser.h"
+#include "Auth.h"
+
+struct AuthConf
+{
+    std::string password;
+    int mode; //Command::Mode
+    std::vector<std::string> keyPrefix;
+    std::vector<std::string> readKeyPrefix;
+    std::vector<std::string> writeKeyPrefix;
+};
+
+struct ServerConf
+{
+    std::string password;
+    std::string addr;
+
+    static bool parse(ServerConf& s, const char* str);
+};
+
+struct ServerGroupConf
+{
+    std::string name;
+    std::vector<ServerConf> servers;
+};
+
+struct ServerPoolConf
+{
+    std::string password;
+    int masterReadPriority = 50;
+    int staticSlaveReadPriority = 0;
+    int dynamicSlaveReadPriority = 0;
+    int refreshInterval = 1;    //seconds
+    int serverFailureLimit = 10;
+    int serverRetryTimeout = 1; //seconds
+    int databases = 1;
+};
+
+struct ClusterServerPoolConf : public ServerPoolConf
+{
+    std::vector<ServerConf> servers;
+};
+
+struct SentinelServerPoolConf : public ServerPoolConf
+{
+    Distribution dist = Distribution::None;
+    Hash hash = Hash::None;
+    char hashTag[2];
+    std::vector<ServerConf> sentinels;
+    std::vector<ServerGroupConf> groups;
+};
+
+struct ReadPolicyConf
+{
+    std::string name;
+    int priority;
+    int weight;
+};
+
+struct DCConf
+{
+    std::string name;
+    std::vector<std::string> addrPrefix;
+    std::vector<ReadPolicyConf> readPolicy;
+};
+
+struct LatencyMonitorConf
+{
+    std::string name;
+    std::bitset<Command::Sentinel> cmds;
+    std::vector<long> timeSpan;//us
+};
+
+class Conf
+{
+public:
+    DefException(InvalidStartArg);
+    DefException(UnknownKey);
+    DefException(InvalidValue);
+    DefException(LogicError);
+public:
+    Conf();
+    ~Conf();
+    bool init(int argc, char* argv[]);
+    const char* name() const
+    {
+        return mName.c_str();
+    }
+    const char* bind() const
+    {
+        return mBind.c_str();
+    }
+    int workerThreads() const
+    {
+        return mWorkerThreads;
+    }
+    long maxMemory() const
+    {
+        return mMaxMemory;
+    }
+    void setClientTimeout(long v)
+    {
+        mClientTimeout = v;
+    }
+    long clientTimeout() const
+    {
+        return mClientTimeout;
+    }
+    int bufSize() const
+    {
+        return mBufSize;
+    }
+    const std::vector<AuthConf>& authConfs() const
+    {
+        return mAuthConfs;
+    }
+    const char* log() const
+    {
+        return mLog.c_str();
+    }
+    int logRotateSecs() const
+    {
+        return mLogRotateSecs;
+    }
+    long logRotateBytes() const
+    {
+        return mLogRotateBytes;
+    }
+    bool allowMissLog() const
+    {
+        return mAllowMissLog;
+    }
+    int logSample(LogLevel::Type lvl) const
+    {
+        return mLogSample[lvl];
+    }
+    int serverPoolType() const
+    {
+        return mServerPoolType;
+    }
+    const ClusterServerPoolConf& clusterServerPool() const
+    {
+        return mClusterServerPool;
+    }
+    const SentinelServerPoolConf& sentinelServerPool() const
+    {
+        return mSentinelServerPool;
+    }
+    const std::string& localDC() const
+    {
+        return mLocalDC;
+    }
+    const std::vector<DCConf>& dcConfs() const
+    {
+        return mDCConfs;
+    }
+    const std::vector<LatencyMonitorConf>& latencyMonitors() const
+    {
+        return mLatencyMonitors;
+    }
+public:
+    static bool parseMemory(long& m, const char* str);
+private:
+    void setGlobal(const ConfParser::Node* node);
+    void setAuthority(const ConfParser::Node* node);
+    void setClusterServerPool(const ConfParser::Node* node);
+    void setSentinelServerPool(const ConfParser::Node* node);
+    void setDataCenter(const ConfParser::Node* node);
+    void check();
+    bool setServerPool(ServerPoolConf& sp, const ConfParser::Node* n);
+    bool setStr(std::string& attr, const char* name, const ConfParser::Node* n);
+    bool setInt(int& attr, const char* name, const ConfParser::Node* n, int lower = INT_MIN, int upper = INT_MAX);
+    bool setLong(long& attr, const char* name, const ConfParser::Node* n, long lower = LONG_MIN, long upper = LONG_MAX);
+    bool setBool(bool& attr, const char* name, const ConfParser::Node* n);
+    bool setMemory(long& mem, const char* name, const ConfParser::Node* n);
+    bool setServers(std::vector<ServerConf>& servs, const char* name, const ConfParser::Node* n);
+    void setDC(DCConf& dc, const ConfParser::Node* n);
+    void setReadPolicy(ReadPolicyConf& c, const ConfParser::Node* n);
+    void setLatencyMonitor(LatencyMonitorConf& m, const ConfParser::Node* n);
+private:
+    std::string mName;
+    std::string mBind;
+    int mWorkerThreads;
+    long mMaxMemory;
+    long mClientTimeout; //us
+    int mBufSize;
+    std::string mLog;
+    int mLogRotateSecs;
+    long mLogRotateBytes;
+    bool mAllowMissLog;
+    int mLogSample[LogLevel::Sentinel];
+    std::vector<AuthConf> mAuthConfs;
+    int mServerPoolType;
+    ClusterServerPoolConf mClusterServerPool;
+    SentinelServerPoolConf mSentinelServerPool;
+    std::vector<DCConf> mDCConfs;
+    std::string mLocalDC;
+    std::vector<LatencyMonitorConf> mLatencyMonitors;
+};
+
+
+#endif
