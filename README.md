@@ -111,7 +111,7 @@ Reset all stats and latency monitors
 
 ## License
 
-Copyright (C) 2017 Joyield, Inc. <joyield.com<at>gmail.com>
+Copyright (C) 2017 Joyield, Inc. <joyield.com#gmail.com>
 
 All rights reserved.
 
