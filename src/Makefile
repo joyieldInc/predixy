@@ -12,7 +12,7 @@ endif
 
 EV ?= auto
 
-LDLIBCPP = -Wl,-Bstatic -lstdc++ -Wl,-Bdynamic
+LDLIBCPP = -static-libstdc++
 
 ifeq ($(EV), auto)
 	plt = $(shell uname)
@@ -47,7 +47,7 @@ else
 $(error Unknown event:$(EV))
 endif
 
-CFLAGS = -std=c++11 -g -Wall -w $(Opts)
+CFLAGS = -std=c++11 -Wall -w $(Opts)
 INCFLAGS =
 LDFLAGS += $(LDLIBCPP) -rdynamic -lpthread
 
@@ -102,7 +102,7 @@ $(target): $(objs)
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 debug:
-	@make LVL=
+	@make LVL=-g
 
 clean:
 	@rm -rf $(objs) $(target)

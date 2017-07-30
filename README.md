@@ -1,6 +1,6 @@
 # Predixy 
 
-**Predixy** is a high performance and full features proxy for [redis](http://redis.io/)
+**Predixy** is a high performance and full features proxy for redis sentinel and redis cluster
 
 ## Features
 
@@ -15,7 +15,7 @@
 + Supports redis transaction, limit in Redis Sentinel single redis group.
 + Supports redis Scripts, script load, eval, evalsha.
 + Supports redis Pub/Sub.
-+ Multi-DataCenters support.
++ Multi-DataCenters support, read from slaves.
 + Extend AUTH, readonly/readwrite/admin permission, keyspace limit.
 + Log level sample, async log record.
 + Log file auto rotate by time and/or file size.
@@ -61,9 +61,10 @@ See below files:
 
     $ ./predixy ../conf/predixy.conf
 
-With default predixy.conf, Predixy will proxy to Redis Cluster 127.0.0.1:6379,
-In general, 127.0.0.1:6379 is not running in Redis Cluster mode,
-So you will look mass log output. But you can still test it with redis-cli.
+With default predixy.conf, Predixy will listen at 0.0.0.0:7617 and
+proxy to Redis Cluster 127.0.0.1:6379.
+In general, 127.0.0.1:6379 is not running in Redis Cluster mode.
+So you will look mass log output, but you can still test it with redis-cli.
 
     $ redis-cli -p 7617 info
 
@@ -105,7 +106,7 @@ Show latency monitors by server address and latency name
 
     redis> INFO ServerLatency <server-address> [latency-name]
 
-Reset all stats and latency monitors
+Reset all stats and latency monitors, require admin permission.
 
     redis> CONFIG ResetStat
 
