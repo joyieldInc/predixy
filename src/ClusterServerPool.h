@@ -26,7 +26,7 @@ public:
         return mServPool;
     }
 private:
-    Server* getServer(Handler* h, Request* req) const;
+    Server* getServer(Handler* h, Request* req, const String& key) const;
     void refreshRequest(Handler* h);
     void handleResponse(Handler* h, ConnectConnection* s, Request* req, Response* res);
     ServerGroup* getGroup(const String& nodeid) const

@@ -78,9 +78,9 @@ public:
         auto it = mServs.find(addr);
         return it == mServs.end() ? nullptr : it->second;
     }
-    Server* getServer(Handler* h, Request* req) const
+    Server* getServer(Handler* h, Request* req, const String& key) const
     {
-        return mGetServerFunc(this, h, req);
+        return mGetServerFunc(this, h, req, key);
     }
     Server* iter(int& cursor) const
     {
@@ -92,7 +92,7 @@ public:
     }
     void handleResponse(Handler* h, ConnectConnection* s, Request* req, Response* res);
 protected:
-    typedef Server* (*GetServerFunc)(const ServerPool* p, Handler* h, Request* req);
+    typedef Server* (*GetServerFunc)(const ServerPool* p, Handler* h, Request* req, const String& key);
     typedef Server* (*IterFunc)(const ServerPool* p, int& cursor);
     typedef void (*RefreshRequestFunc)(ServerPool* p, Handler* h);
     typedef void (*HandleResponseFunc)(ServerPool* p, Handler* h, ConnectConnection* s, Request* req, Response* res);
@@ -147,9 +147,9 @@ public:
     {
     }
 private:
-    static Server* getServer(const ServerPool* p, Handler* h, Request* req)
+    static Server* getServer(const ServerPool* p, Handler* h, Request* req, const String& key)
     {
-        return static_cast<const T*>(p)->getServer(h, req);
+        return static_cast<const T*>(p)->getServer(h, req, key);
     }
     static Server* iter(const ServerPool* p, int& cursor)
     {

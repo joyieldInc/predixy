@@ -218,14 +218,6 @@ void ConnectConnection::handleResponse(Handler* h)
     }
 }
 
-void ConnectConnection::send(Handler* h, Request* req)
-{
-    FuncCallTimer();
-    mSendRequests.push_back(req);
-    logDebug("h %d s %s %d pend req %ld",
-              h->id(), peer(), fd(), req->id());
-}
-
 void ConnectConnection::close(Handler* h)
 {
     SendRequestList* reqs[2] = {&mSentRequests, &mSendRequests};

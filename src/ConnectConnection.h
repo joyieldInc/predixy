@@ -28,8 +28,11 @@ public:
     ~ConnectConnection();
     bool writeEvent(Handler* h);
     void readEvent(Handler* h);
-    void send(Handler* h, Request* req);
     void close(Handler* h);
+    void send(Handler* h, Request* req)
+    {
+        mSendRequests.push_back(req);
+    }
     Server* server() const
     {
         return mServ;

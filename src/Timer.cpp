@@ -48,12 +48,12 @@ void TimerPoint::report()
     std::sort(points, points + cnt,
             [](TimerPoint* p1, TimerPoint* p2)
             {return p1->elapsed() > p2->elapsed();});
-        printf("%16s %12s %8s %s\n","Total(us)", "Count", "Avg(us)", "Point" );
+        printf("%16s %12s %8s %s\n","Total(us)", "Count", "Avg(ns)", "Point" );
     for (i = 0; i < cnt; ++i) {
         auto p = points[i];
-        printf("%16ld %12ld %8ld %s\n",
+        printf("%16ld %12ld %9ld %s\n",
                 p->elapsed(), p->count(),
-                p->elapsed()/p->count(), p->key());
+                p->elapsed()*1000/p->count(), p->key());
     }
     if (points != points0) {
         delete[] points;

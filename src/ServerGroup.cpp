@@ -56,6 +56,7 @@ Server* ServerGroup::getServer(Handler* h, Request* req) const
             }
             if (s->role() == Server::Master) {
                 serv = s;
+                break;
             }
         }
     } else if (auto dataCenter = mPool->proxy()->dataCenter()) {

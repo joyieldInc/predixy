@@ -102,8 +102,6 @@ bool Proxy::init(int argc, char* argv[])
     }
 
     mLatencyMonitorSet.init(mConf->latencyMonitors());
-    Request::init();
-    Response::init();
     ListenSocket* s = new ListenSocket(mConf->bind(), SOCK_STREAM);
     if (!s->setNonBlock()) {
         logError("proxy listener set nonblock fail:%s", StrError());

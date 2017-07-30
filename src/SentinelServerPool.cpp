@@ -39,11 +39,11 @@ void SentinelServerPool::init(const SentinelServerPoolConf& conf)
         mSentinels[i++] = s;
         mServs[s->addr()] = s;
     }
-    mGroups.resize(conf.groups.size());
+    mGroupPool.resize(conf.groups.size());
     i = 0;
     for (auto& gc : conf.groups) {
         ServerGroup* g = new ServerGroup(this, gc.name);
-        mGroups[i++] = g;
+        mGroupPool[i++] = g;
         for (auto& sc : gc.servers) {
             Server* s = new Server(this, sc.addr, true);
             s->setPassword(sc.password.empty() ? conf.password : sc.password);
@@ -55,7 +55,7 @@ void SentinelServerPool::init(const SentinelServerPoolConf& conf)
     }
 }
 
-Server* SentinelServerPool::getServer(Handler* h, Request* req) const
+Server* SentinelServerPool::getServer(Handler* h, Request* req, const String& key) const
 {
     FuncCallTimer();
     switch (req->type()) {
@@ -76,22 +76,21 @@ Server* SentinelServerPool::getServer(Handler* h, Request* req) const
     default:
         break;
     }
-    if (mGroups.size() == 1) {
-        return mGroups[0]->getServer(h, req);
-    } else if (mGroups.size() > 1) {
+    if (mGroupPool.size() == 1) {
+        return mGroupPool[0]->getServer(h, req);
+    } else if (mGroupPool.size() > 1) {
         switch (mDist) {
         case Distribution::Modula:
             {
-                SegmentStr<Const::MaxKeyLen> key(req->key());
                 long idx = mHash.hash(key.data(), key.length(), mHashTag);
-                idx %= mGroups.size();
-                return mGroups[idx]->getServer(h, req);
+                idx %= mGroupPool.size();
+                return mGroupPool[idx]->getServer(h, req);
             }
             break;
         case Distribution::Random:
             {
-                int idx = h->rand() % mGroups.size();
-                return mGroups[idx]->getServer(h, req);
+                int idx = h->rand() % mGroupPool.size();
+                return mGroupPool[idx]->getServer(h, req);
             }
             break;
         default:
@@ -104,7 +103,7 @@ Server* SentinelServerPool::getServer(Handler* h, Request* req) const
 void SentinelServerPool::refreshRequest(Handler* h)
 {
     logDebug("h %d update sentinel server pool", h->id());
-    for (auto g : mGroups) {
+    for (auto g : mGroupPool) {
         RequestPtr req = RequestAlloc::create();
         req->setSentinels(g->name());
         req->setData(g);

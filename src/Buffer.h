@@ -192,7 +192,7 @@ public:
     }
     bool empty() const
     {
-        return mCur.buf == mEnd.buf && mCur.pos == mEnd.pos;
+        return mBegin.buf == mEnd.buf && mBegin.pos == mEnd.pos;
     }
 private:
     BufferPos mBegin;

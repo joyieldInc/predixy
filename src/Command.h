@@ -7,7 +7,9 @@
 #ifndef _PREDIXY_COMMAND_H_
 #define _PREDIXY_COMMAND_H_
 
+#include <unordered_map>
 #include "Exception.h"
+#include "HashFunc.h"
 
 class Command
 {
@@ -224,6 +226,10 @@ public:
     {
         return mode & MultiKeyVal;
     }
+    bool isAnyMulti() const
+    {
+        return mode & (MultiKey|SMultiKey|MultiKeyVal);
+    }
     static void init();
     static const Command& get(Type type)
     {
@@ -244,7 +250,15 @@ public:
 private:
     static const int MaxArgs = 100000000;
     static const Command CmdPool[Sentinel];
-    typedef std::map<String, const Command*, StringCaseCmp> CommandMap;
+    class H
+    {
+    public:
+        size_t operator()(const String& s) const
+        {
+            return Hash::crc16(s.data(), s.length());
+        }
+    };
+    typedef std::unordered_map<String, const Command*, H> CommandMap;
     static CommandMap CmdMap;
 };
 

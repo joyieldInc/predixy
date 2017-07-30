@@ -14,7 +14,6 @@ class RequestParser
 {
 public:
     static const int MaxAllowInvalidByteCount = 1024;
-    static const int MaxCmdLen = 32;
     enum State
     {
         Idle,        // * or inline command
@@ -24,11 +23,27 @@ public:
         InlineArg,
         ArgNum,      // 2
         ArgNumLF,    // \r\n
+        CmdTag,
+        CmdLen,
+        CmdLenLF,
+        CmdBody,
+        CmdBodyTooLong,
+        CmdBodyLF,
+        KeyTag,
+        KeyLen,
+        KeyLenLF,
+        KeyBody,
+        KeyBodyLF,
         ArgTag,      // $           $
         ArgLen,      // 3           5
         ArgLenLF,    // \r\n        \r\n
         ArgBody,     // get         hello
         ArgBodyLF,   // \r\n        \r\n
+        SArgTag,      // $           $
+        SArgLen,      // 3           5
+        SArgLenLF,    // \r\n        \r\n
+        SArgBody,     // get         hello
+        SArgBodyLF,   // \r\n        \r\n
         Finished,
 
         Error
@@ -76,19 +91,7 @@ public:
     {
         return mArgNum;
     }
-    Segment& arg()
-    {
-        return mArg;
-    }
-    const Segment& arg() const
-    {
-        return mArg;
-    }
-    Segment& cmd()
-    {
-        return mCmd;
-    }
-    const Segment& cmd() const
+    const char* cmd() const
     {
         return mCmd;
     }
@@ -103,14 +106,13 @@ public:
 private:
     void parseCmd();
     bool isKey(bool split) const;
+    bool isSplit(bool split) const;
 private:
     Command::Type mType;
     const Command* mCommand;
-                    // *2\r\n$3\r\nget\r\n$3\r\nkey\r\n
-    Segment mReq;   // |------------------------------|
-    Segment mCmd;   //             |-|                 
-    Segment mArg;   //                    |-----------|
-    Segment mKey;   //                          |-|    
+    Segment mReq;
+    Segment mKey;
+    char mCmd[Const::MaxCmdLen];
     Status mStatus;
     State mState;
     bool mInline;

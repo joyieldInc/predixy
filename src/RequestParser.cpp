@@ -21,8 +21,6 @@ void RequestParser::reset()
     mType = Command::None;
     mCommand = nullptr;
     mReq.clear();
-    mCmd.clear();
-    mArg.clear();
     mKey.clear();
     mStatus = Normal;
     mState = Idle;
@@ -34,23 +32,31 @@ void RequestParser::reset()
     mByteCnt = 0;
 }
 
-bool RequestParser::isKey(bool split) const
+inline bool RequestParser::isKey(bool split) const
 {
-    if (mCommand) {
-        switch (mCommand->mode & Command::KeyMask) {
-        case Command::NoKey:
-            return false;
-        case Command::MultiKey:
-            return split ? mArgCnt > 0 : mArgCnt == 1;
-        case Command::SMultiKey:
-            return mArgCnt > 0;
-        case Command::MultiKeyVal:
-            return split ? (mArgCnt & 1) : mArgCnt == 1;
-        case Command::KeyAt3:
-            return mArgCnt == 3;
-        default:
-            return mArgCnt == 1;
-        }
+    switch (mCommand->mode & Command::KeyMask) {
+    case Command::NoKey:
+        return false;
+    case Command::MultiKey:
+        return split ? mArgCnt > 0 : mArgCnt == 1;
+    case Command::SMultiKey:
+        return mArgCnt > 0;
+    case Command::MultiKeyVal:
+        return split ? (mArgCnt & 1) : mArgCnt == 1;
+    case Command::KeyAt3:
+        return mArgCnt == 3;
+    default:
+        return mArgCnt == 1;
+    }
+    return false;
+}
+
+inline bool RequestParser::isSplit(bool split) const
+{
+    if (mCommand->mode & (Command::MultiKey|Command::MultiKeyVal)) {
+        return split && mStatus == Normal && isKey(true);
+    } else if (mCommand->mode & Command::SMultiKey) {
+        return mStatus == Normal;
     }
     return false;
 }
@@ -88,16 +94,21 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             } else if (!isspace(ch)) {
                 mReq.begin().buf = buf;
                 mReq.begin().pos = pos;
-                mCmd.begin() = mReq.begin();
+                mCmd[0] = tolower(ch);
+                mArgLen = 1;
                 mState = InlineCmd;
             }
             break;
         case InlineCmd:
             if (isspace(ch)) {
-                mCmd.end().buf = buf;
-                mCmd.end().pos = pos;
+                mCmd[mArgLen < Const::MaxCmdLen ? mArgLen : Const::MaxCmdLen - 1] = '\0';
                 parseCmd();
                 mState = ch == '\r' ? InlineLF : InlineArg;
+            } else {
+                if (mArgLen < Const::MaxCmdLen) {
+                    mCmd[mArgLen] = tolower(ch);
+                }
+                ++mArgLen;
             }
             break;
         case InlineArg:
@@ -117,7 +128,6 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (ch >= '0' && ch <= '9') {
                 mArgNum = mArgNum * 10 + (ch - '0');
             } else if (ch == '\r') {
-                //mState = mArgNum > 0 ? ArgNumLF : Error;
                 mArgNum > 0 ? mState = ArgNumLF : error = __LINE__;
             } else {
                 error = __LINE__;
@@ -125,26 +135,128 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             break;
         case ArgNumLF:
             mArgCnt = 0;
-            //mState = ch == '\n' ? ArgTag : Error;
-            ch == '\n' ? mState = ArgTag : error = __LINE__;
+            ch == '\n' ? mState = CmdTag : error = __LINE__;
             break;
-        case ArgTag:
-            mArgLen = 0;
+        case CmdTag:
             if (ch == '$') {
-                mState = ArgLen;
-                if (isKey(split)) {
-                    mArg.begin().buf = buf;
-                    mArg.begin().pos = pos;
+                mArgLen = 0;
+                mState = CmdLen;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case CmdLen:
+            if (ch >= '0' && ch <= '9') {
+                mArgLen = mArgLen * 10 + (ch - '0');
+            } else if (ch == '\r') {
+                mArgLen > 0 ? mState = CmdLenLF : error = __LINE__;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case CmdLenLF:
+            if (ch == '\n') {
+                mArgBodyCnt = 0;
+                mState = mArgLen < Const::MaxCmdLen ? CmdBody : CmdBodyTooLong;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case CmdBody:
+            if (mArgBodyCnt == mArgLen) {
+                mCmd[mArgLen] = '\0';
+                ch == '\r' ? mState = CmdBodyLF : error = __LINE__;
+            } else {
+                mCmd[mArgBodyCnt++] = tolower(ch);
+            }
+            break;
+        case CmdBodyTooLong:
+            if (mArgBodyCnt == mArgLen) {
+                mCmd[Const::MaxCmdLen - 1] = '\0';
+                ch == '\r' ? mState = CmdBodyLF : error = __LINE__;
+            } else {
+                if (mArgBodyCnt < Const::MaxCmdLen) {
+                    mCmd[mArgBodyCnt] = ch;
+                }
+                ++mArgBodyCnt;
+            }
+            break;
+        case CmdBodyLF:
+            if (ch == '\n') {
+                parseCmd();
+                if (++mArgCnt == mArgNum) {
+                    mState = Finished;
+                    goto Done;
+                }
+                if (mCommand->mode & Command::KeyMask) {
+                    mState = SArgTag;
+                } else {
+                    mState = KeyTag;
                 }
             } else {
                 error = __LINE__;
             }
             break;
+        case KeyTag:
+            mArgLen = 0;
+            ch == '$' ? mState = KeyLen : error = __LINE__;
+            break;
+        case KeyLen:
+            if (ch >= '0' && ch <= '9') {
+                mArgLen = mArgLen * 10 + (ch - '0');
+            } else if (ch == '\r') {
+                mArgLen >= 0 ? mState = KeyLenLF : error = __LINE__;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case KeyLenLF:
+            if (ch == '\n') {
+                mArgBodyCnt = 0;
+                mState = KeyBody;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case KeyBody:
+            if (mArgBodyCnt == 0) {
+                mKey.begin().buf = buf;
+                mKey.begin().pos = pos;
+            }
+            if (mArgBodyCnt + (end - cursor) > mArgLen) {
+                pos += mArgLen - mArgBodyCnt;
+                cursor = buf->data() + pos;
+                if (*cursor == '\r') {
+                    mState = KeyBodyLF;
+                    mKey.end().buf = buf;
+                    mKey.end().pos = pos;
+                } else {
+                    error = __LINE__;
+                }
+            } else {
+                mArgBodyCnt += end - cursor;
+                pos = buf->length() - 1;
+            }
+            break;
+        case KeyBodyLF:
+            if (ch == '\n') {
+                if (++mArgCnt == mArgNum) {
+                    mState = Finished;
+                    goto Done;
+                }
+                mState = ArgTag;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case ArgTag:
+            mArgLen = 0;
+            ch == '$' ? mState = ArgLen : error = __LINE__;
+            break;
         case ArgLen:
             if (ch >= '0' && ch <= '9') {
                 mArgLen = mArgLen * 10 + (ch - '0');
             } else if (ch == '\r') {
-                //mState = mArgLen >= 0 ? ArgLenLF : Error;
                 mArgLen >= 0 ? mState = ArgLenLF : error = __LINE__;
             } else {
                 error = __LINE__;
@@ -155,31 +267,10 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             ch == '\n' ? mState = ArgBody : error = __LINE__;
             break;
         case ArgBody:
-            if (mArgBodyCnt == 0) {
-                if (mArgCnt == 0) {
-                    mCmd.begin().buf = buf;
-                    mCmd.begin().pos = pos;
-                } else if (isKey(split)) {
-                    mKey.begin().buf = buf;
-                    mKey.begin().pos = pos;
-                }
-            }
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
-                if (*cursor == '\r') {
-                    mState = ArgBodyLF;
-                    if (mArgCnt == 0) {
-                        mCmd.end().buf = buf;
-                        mCmd.end().pos = pos;
-                        parseCmd();
-                    } else if (isKey(split)) {
-                        mKey.end().buf = buf;
-                        mKey.end().pos = pos;
-                    }
-                } else {
-                    error = __LINE__;
-                }
+                *cursor == '\r' ? mState = ArgBodyLF : error = __LINE__;
             } else {
                 mArgBodyCnt += end - cursor;
                 pos = buf->length() - 1;
@@ -192,16 +283,69 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                     goto Done;
                 } else {
                     mState = ArgTag;
-                    if (mArgCnt > 1 && isKey(split) && mStatus == Normal &&
-                        (mCommand->mode&(Command::MultiKey|Command::SMultiKey|Command::MultiKeyVal))) {
-                        goto Done;
+                }
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case SArgTag:
+            mArgLen = 0;
+            if (ch == '$') {
+                mState = SArgLen;
+                if (isSplit(split)) {
+                    mReq.begin().buf = buf;
+                    mReq.begin().pos = pos;
+                }
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case SArgLen:
+            if (ch >= '0' && ch <= '9') {
+                mArgLen = mArgLen * 10 + (ch - '0');
+            } else if (ch == '\r') {
+                mArgLen >= 0 ? mState = SArgLenLF : error = __LINE__;
+            } else {
+                error = __LINE__;
+            }
+            break;
+        case SArgLenLF:
+            mArgBodyCnt = 0;
+            ch == '\n' ? mState = SArgBody : error = __LINE__;
+            break;
+        case SArgBody:
+            if (mArgBodyCnt == 0) {
+                if (isKey(split)) {
+                    mKey.begin().buf = buf;
+                    mKey.begin().pos = pos;
+                }
+            }
+            if (mArgBodyCnt + (end - cursor) > mArgLen) {
+                pos += mArgLen - mArgBodyCnt;
+                cursor = buf->data() + pos;
+                if (*cursor == '\r') {
+                    mState = SArgBodyLF;
+                    if (isKey(split)) {
+                        mKey.end().buf = buf;
+                        mKey.end().pos = pos;
                     }
-                    if (mArgCnt > 1 && mCommand && mStatus == Normal && split) {
-                        if (mCommand->isMultiKey()) {
-                            goto Done;
-                        } else if (mCommand->isMultiKeyVal() && (mArgCnt & 1)) {
-                            goto Done;
-                        }
+                } else {
+                    error = __LINE__;
+                }
+            } else {
+                mArgBodyCnt += end - cursor;
+                pos = buf->length() - 1;
+            }
+            break;
+        case SArgBodyLF:
+            if (ch == '\n') {
+                if (++mArgCnt == mArgNum) {
+                    mState = Finished;
+                    goto Done;
+                } else {
+                    mState = SArgTag;
+                    if (isSplit(split)) {
+                        goto Done;
                     }
                 }
             } else {
@@ -230,8 +374,6 @@ Done:
     mReq.end().buf = buf;
     mReq.end().pos = ++pos;
     mReq.rewind();
-    mArg.end() = mReq.end();
-    mArg.rewind();
     if (mState == Finished) {
         return mStatus == Normal ? Complete : mStatus;
     } else {
@@ -242,19 +384,18 @@ Done:
 void RequestParser::parseCmd()
 {
     FuncCallTimer();
-    SegmentStr<MaxCmdLen> cmd(mCmd);
-    if (!cmd.complete()) {
+    if (mArgLen >= Const::MaxCmdLen) {
         mStatus = CmdError;
         mType = Command::None;
-        logNotice("unknown request cmd too long:%.*s...",
-                cmd.length(), cmd.data());
+        logNotice("unknown request cmd too long:%s...", mCmd);
         return;
     }
-    auto c = Command::find(cmd);
+    auto c = Command::find(mCmd);
     if (!c) {
+        mCommand = &Command::get(Command::None);
         mStatus = CmdError;
         mType = Command::None;
-        logNotice("unknown request cmd:%.*s", cmd.length(), cmd.data());
+        logNotice("unknown request cmd:%s", mCmd);
         return;
     }
     mType = c->type;
@@ -269,8 +410,8 @@ void RequestParser::parseCmd()
     }
     if (mArgNum < c->minArgs || mArgNum > c->maxArgs) {
         mStatus = ArgError;
-        logNotice("request argument is invalid cmd %.*s argnum %d",
-                cmd.length(), cmd.data(), mArgNum);
+        logNotice("request argument is invalid cmd %s argnum %d",
+                mCmd, mArgNum);
         return;
     }
     switch (mType) {
@@ -278,9 +419,8 @@ void RequestParser::parseCmd()
     case Command::Msetnx:
         if (!(mArgNum & 1)) {
             mStatus = ArgError;
-            logNotice("request argument is invalid cmd %.*s argnum %d",
-                    cmd.length(), cmd.data(), mArgNum);
-            return;
+            logNotice("request argument is invalid cmd %s argnum %d",
+                    mCmd, mArgNum);
         }
         break;
     default:

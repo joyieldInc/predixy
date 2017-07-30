@@ -12,41 +12,42 @@ struct GenericResponse
     Response::GenericCode code;
     Reply::Type type;
     const char* content;
-    const Response* res;
 };
 
-static GenericResponse GenericResponses[] = {
-    {Response::Pong,                  Reply::Status,   "+PONG\r\n", nullptr},
-    {Response::Ok,                    Reply::Status,   "+OK\r\n", nullptr},
+static const GenericResponse GenericResponseDefs[] = {
+    {Response::Pong,                  Reply::Status,   "+PONG\r\n"},
+    {Response::Ok,                    Reply::Status,   "+OK\r\n"},
     {Response::Cmd,                   Reply::Array,    "*0\r\n"},
-    {Response::UnknownCmd,            Reply::Error,    "-ERR unknown command\r\n", nullptr},
-    {Response::ArgWrong,              Reply::Error,    "-ERR argument wrong\r\n", nullptr},
-    {Response::InvalidDb,             Reply::Error,    "-ERR invalid DB index\r\n", nullptr},
-    {Response::NoPasswordSet,         Reply::Error,    "-ERR Client sent AUTH, but no password is set\r\n", nullptr},
-    {Response::InvalidPassword,       Reply::Error,    "-ERR invalid password\r\n", nullptr},
-    {Response::Unauth,                Reply::Error,    "-NOAUTH Authentication required.\r\n", nullptr},
-    {Response::PermissionDeny,        Reply::Error,    "-ERR auth permission deny\r\n", nullptr},
-    {Response::NoServer,              Reply::Error,    "-ERR no server avaliable\r\n", nullptr},
-    {Response::NoServerConnection,    Reply::Error,    "-ERR no server connection avaliable\r\n", nullptr},
-    {Response::ServerConnectionClose, Reply::Error,    "-ERR server connection close\r\n", nullptr},
-    {Response::DeliverRequestFail,    Reply::Error,    "-ERR deliver request fail\r\n", nullptr},
-    {Response::ForbidTransaction,     Reply::Error,    "-ERR forbid transaction in current server pool\r\n", nullptr},
-    {Response::ConfigSubCmdUnknown,   Reply::Error,    "-ERR CONFIG subcommand must be one of GET, SET\r\n", nullptr},
-    {Response::InvalidScanCursor,     Reply::Error,    "-ERR invalid cursor\r\n", nullptr},
-    {Response::ScanEnd,               Reply::Array,    "*2\r\n$1\r\n0\r\n*0\r\n", nullptr}
+    {Response::UnknownCmd,            Reply::Error,    "-ERR unknown command\r\n"},
+    {Response::ArgWrong,              Reply::Error,    "-ERR argument wrong\r\n"},
+    {Response::InvalidDb,             Reply::Error,    "-ERR invalid DB index\r\n"},
+    {Response::NoPasswordSet,         Reply::Error,    "-ERR Client sent AUTH, but no password is set\r\n"},
+    {Response::InvalidPassword,       Reply::Error,    "-ERR invalid password\r\n"},
+    {Response::Unauth,                Reply::Error,    "-NOAUTH Authentication required.\r\n"},
+    {Response::PermissionDeny,        Reply::Error,    "-ERR auth permission deny\r\n"},
+    {Response::NoServer,              Reply::Error,    "-ERR no server avaliable\r\n"},
+    {Response::NoServerConnection,    Reply::Error,    "-ERR no server connection avaliable\r\n"},
+    {Response::ServerConnectionClose, Reply::Error,    "-ERR server connection close\r\n"},
+    {Response::DeliverRequestFail,    Reply::Error,    "-ERR deliver request fail\r\n"},
+    {Response::ForbidTransaction,     Reply::Error,    "-ERR forbid transaction in current server pool\r\n"},
+    {Response::ConfigSubCmdUnknown,   Reply::Error,    "-ERR CONFIG subcommand must be one of GET, SET\r\n"},
+    {Response::InvalidScanCursor,     Reply::Error,    "-ERR invalid cursor\r\n"},
+    {Response::ScanEnd,               Reply::Array,    "*2\r\n$1\r\n0\r\n*0\r\n"}
 };
+
+thread_local static Response* GenericResponses[Response::CodeSentinel];
 
 void Response::init()
 {
     BufferPtr buf = BufferAlloc::create();
-    for (auto& r : GenericResponses) {
+    for (auto& r : GenericResponseDefs) {
         Response* res = new Response();
         res->mType = r.type;
         if (buf->room() < (int)strlen(r.content)) {
             buf = BufferAlloc::create();
         }
         buf = res->mRes.set(buf, r.content);
-        r.res = res;
+        GenericResponses[r.code] = res;
     }
 }
 
@@ -60,7 +61,7 @@ Response::Response(GenericCode code):
     mType(Reply::None),
     mInteger(0)
 {
-    auto r = GenericResponses[code].res;
+    auto r = GenericResponses[code];
     mType = r->mType;
     mRes = r->mRes;
 }
@@ -74,7 +75,6 @@ void Response::set(const ResponseParser& p)
 {
     mType = p.type();
     mInteger = p.integer();
-    mHead.clear();
     mRes = p.response();
 }
 
@@ -83,14 +83,12 @@ void Response::set(int64_t num)
 {
     mType = Reply::Integer;
     mInteger = num;
-    mHead.clear();
     mRes.fset(nullptr, ":%ld\r\n", num);
 }
 
 void Response::setStr(const char* str, int len)
 {
     mType = Reply::String;
-    mHead.clear();
     if (len < 0) {
         len = strlen(str);
     }
@@ -100,7 +98,6 @@ void Response::setStr(const char* str, int len)
 void Response::setErr(const char* str, int len)
 {
     mType = Reply::Error;
-    mHead.clear();
     if (len < 0) {
         len = strlen(str);
     }

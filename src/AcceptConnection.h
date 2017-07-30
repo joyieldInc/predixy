@@ -23,7 +23,7 @@ class AcceptConnection :
     public Subscribe,
     public ListNode<AcceptConnection, SharePtr<AcceptConnection>>,
     public DequeNode<AcceptConnection, SharePtr<AcceptConnection>>,
-    public RefCntObj<AcceptConnection>
+    public RefCntObj<AcceptConnection, AtomicInt>
 {
 public:
     typedef AcceptConnection Value;

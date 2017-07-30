@@ -33,7 +33,18 @@ public:
     {
         return mType;
     }
-    long hash(const char* buf, int len) const;
+    long hash(const char* buf, int len) const
+    {
+        switch (mType) {
+        case Atol:
+            return atol(buf, len);
+        case Crc16:
+            return crc16(buf, len);
+        default:
+            break;
+        }
+        return 0;
+    }
     long hash(const char* buf, int len, const char* tag) const
     {
         buf = hashTagStr(buf, len, tag);

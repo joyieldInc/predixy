@@ -122,7 +122,7 @@ thread_local T* Alloc<T, CacheSize>::Free[CacheSize];
 template<class T, int CacheSize>
 thread_local int Alloc<T, CacheSize>::Size = 0;
 
-template<class T>
+template<class T, class CntType = int>
 class RefCntObj
 {
 public:
@@ -138,6 +138,7 @@ public:
     }
     void ref()
     {
+        FuncCallTimer();
         ++mCnt;
     }
     void unref()
@@ -156,7 +157,7 @@ protected:
         mCnt = 0;
     }
 private:
-    AtomicInt mCnt;
+    CntType mCnt;
 };
 
 template<class T>

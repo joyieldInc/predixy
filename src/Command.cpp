@@ -11,7 +11,7 @@
 #include "Command.h"
 
 const Command Command::CmdPool[Sentinel] = {
-    {None,              "",                 0,  0,         Read},
+    {None,              "",                 0,  MaxArgs,   Read},
     {Ping,              "ping",             1,  2,         Read},
     {PingServ,          "ping",             1,  2,         Inner},
     {Echo,              "echo",             2,  2,         Read},
@@ -24,7 +24,7 @@ const Command Command::CmdPool[Sentinel] = {
     {SentinelSlaves,    "sentinel slaves",  3,  3,         Inner},
     {Cmd,               "command",          1,  1,         Read},
     {Info,              "info",             1,  4,         Read},
-    {Config,            "config",           3,  4,         Admin},
+    {Config,            "config",           2,  4,         Admin},
     {Cluster,           "cluster",          2,  2,         Inner},
     {ClusterNodes,      "cluster nodes",    2,  2,         SubCmd|Inner},
     {Asking,            "asking",           1,  1,         Inner},
@@ -171,7 +171,6 @@ const Command Command::CmdPool[Sentinel] = {
 };
 
 Command::CommandMap Command::CmdMap;
-
 void Command::init()
 {
     int type = 0;

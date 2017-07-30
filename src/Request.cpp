@@ -13,39 +13,40 @@ struct GenericRequest
     Request::GenericCode code;
     Command::Type type;
     const char* content;
-    const Request* req;
 };
 
-static GenericRequest GenericRequests[] = {
-    {Request::Ping,         Command::Ping,          "*1\r\n$4\r\nping\r\n", nullptr},
-    {Request::PingServ,     Command::PingServ,      "*1\r\n$4\r\nping\r\n", nullptr},
-    {Request::ClusterNodes, Command::ClusterNodes,  "*2\r\n$7\r\ncluster\r\n$5\r\nnodes\r\n", nullptr},
-    {Request::Asking,       Command::Asking,        "*1\r\n$6\r\nasking\r\n", nullptr},
-    {Request::Readonly,     Command::Readonly,      "*1\r\n$8\r\nreadonly\r\n", nullptr},
-    {Request::UnwatchServ,  Command::UnwatchServ,   "*1\r\n$7\r\nunwatch\r\n", nullptr},
-    {Request::DiscardServ,  Command::DiscardServ,   "*1\r\n$7\r\ndiscard\r\n", nullptr},
-    {Request::MgetHead,     Command::Mget,          "*2\r\n$4\r\nmget\r\n", nullptr},
-    {Request::MsetHead,     Command::Mset,          "*3\r\n$4\r\nmset\r\n", nullptr},
-    {Request::MsetnxHead,   Command::Msetnx,        "*3\r\n$6\r\nmsetnx\r\n", nullptr},
-    {Request::TouchHead,    Command::Touch,         "*2\r\n$5\r\ntouch\r\n", nullptr},
-    {Request::ExistsHead,   Command::Exists,        "*2\r\n$6\r\nexists\r\n", nullptr},
-    {Request::DelHead,      Command::Del,           "*2\r\n$3\r\ndel\r\n", nullptr},
-    {Request::UnlinkHead,   Command::Unlink,        "*2\r\n$6\r\nunlink\r\n", nullptr},
-    {Request::PsubscribeHead,Command::Psubscribe,   "*2\r\n$10\r\npsubscribe\r\n", nullptr},
-    {Request::SubscribeHead,Command::Subscribe,     "*2\r\n$9\r\nsubscribe\r\n", nullptr}
+static const GenericRequest GenericRequestDefs[] = {
+    {Request::Ping,         Command::Ping,          "*1\r\n$4\r\nping\r\n"},
+    {Request::PingServ,     Command::PingServ,      "*1\r\n$4\r\nping\r\n"},
+    {Request::ClusterNodes, Command::ClusterNodes,  "*2\r\n$7\r\ncluster\r\n$5\r\nnodes\r\n"},
+    {Request::Asking,       Command::Asking,        "*1\r\n$6\r\nasking\r\n"},
+    {Request::Readonly,     Command::Readonly,      "*1\r\n$8\r\nreadonly\r\n"},
+    {Request::UnwatchServ,  Command::UnwatchServ,   "*1\r\n$7\r\nunwatch\r\n"},
+    {Request::DiscardServ,  Command::DiscardServ,   "*1\r\n$7\r\ndiscard\r\n"},
+    {Request::MgetHead,     Command::Mget,          "*2\r\n$4\r\nmget\r\n"},
+    {Request::MsetHead,     Command::Mset,          "*3\r\n$4\r\nmset\r\n"},
+    {Request::MsetnxHead,   Command::Msetnx,        "*3\r\n$6\r\nmsetnx\r\n"},
+    {Request::TouchHead,    Command::Touch,         "*2\r\n$5\r\ntouch\r\n"},
+    {Request::ExistsHead,   Command::Exists,        "*2\r\n$6\r\nexists\r\n"},
+    {Request::DelHead,      Command::Del,           "*2\r\n$3\r\ndel\r\n"},
+    {Request::UnlinkHead,   Command::Unlink,        "*2\r\n$6\r\nunlink\r\n"},
+    {Request::PsubscribeHead,Command::Psubscribe,   "*2\r\n$10\r\npsubscribe\r\n"},
+    {Request::SubscribeHead,Command::Subscribe,     "*2\r\n$9\r\nsubscribe\r\n"}
 };
+
+thread_local static Request* GenericRequests[Request::CodeSentinel];
 
 void Request::init()
 {
     BufferPtr buf = BufferAlloc::create();
-    for (auto& r : GenericRequests) {
+    for (auto& r : GenericRequestDefs) {
         Request* req = new Request();
         req->mType= r.type;
         if (buf->room() < (int)strlen(r.content)) {
             buf = BufferAlloc::create();
         }
         buf = req->mReq.set(buf, r.content);
-        r.req = req;
+        GenericRequests[r.code] = req;
     }
 }
 
@@ -85,7 +86,7 @@ Request::Request(GenericCode code):
     mCreateTime(Util::elapsedUSec()),
     mData(nullptr)
 {
-    auto r = GenericRequests[code].req;
+    auto r = GenericRequests[code];
     mType = r->mType;
     mReq = r->mReq;
 }
@@ -110,38 +111,38 @@ void Request::set(const RequestParser& p, Request* leader)
         const Request* r = nullptr;
         switch (mType) {
         case Command::Mget:
-            r = GenericRequests[MgetHead].req;
+            r = GenericRequests[MgetHead];
             break;
         case Command::Mset:
-            r = GenericRequests[MsetHead].req;
+            r = GenericRequests[MsetHead];
             break;
         case Command::Msetnx:
-            r = GenericRequests[MsetnxHead].req;
+            r = GenericRequests[MsetnxHead];
             break;
         case Command::Touch:
-            r = GenericRequests[TouchHead].req;
+            r = GenericRequests[TouchHead];
             break;
         case Command::Exists:
-            r = GenericRequests[ExistsHead].req;
+            r = GenericRequests[ExistsHead];
             break;
         case Command::Del:
-            r = GenericRequests[DelHead].req;
+            r = GenericRequests[DelHead];
             break;
         case Command::Unlink:
-            r = GenericRequests[UnlinkHead].req;
+            r = GenericRequests[UnlinkHead];
             break;
         case Command::Psubscribe:
-            r = GenericRequests[PsubscribeHead].req;
+            r = GenericRequests[PsubscribeHead];
             break;
         case Command::Subscribe:
-            r = GenericRequests[SubscribeHead].req;
+            r = GenericRequests[SubscribeHead];
             break;
         default:
             //should never reach
             break;
         }
         mHead = r->mReq;
-        mReq = p.arg();
+        mReq = p.request();
         mLeader = leader;
         if (leader == this) {
             if (mType == Command::Mset || mType == Command::Msetnx) {

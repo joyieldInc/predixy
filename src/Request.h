@@ -43,7 +43,9 @@ public:
         DelHead,
         UnlinkHead,
         PsubscribeHead,
-        SubscribeHead
+        SubscribeHead,
+
+        CodeSentinel
     };
     static void init();
 public:

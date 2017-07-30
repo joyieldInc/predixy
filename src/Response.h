@@ -37,7 +37,9 @@ public:
         ForbidTransaction,
         ConfigSubCmdUnknown,
         InvalidScanCursor,
-        ScanEnd
+        ScanEnd,
+
+        CodeSentinel
     };
     static void init();
     static Response* create(GenericCode code, Request* req = nullptr);

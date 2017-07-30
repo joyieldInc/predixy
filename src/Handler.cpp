@@ -46,6 +46,8 @@ Handler::~Handler()
 
 void Handler::run()
 {
+    Request::init();
+    Response::init();
     auto conf = mProxy->conf();
     refreshServerPool();
     while (!mStop) {
@@ -134,7 +136,7 @@ void Handler::postEvent()
     }
 }
 
-void Handler::addPostEvent(AcceptConnection* c, int evts)
+inline void Handler::addPostEvent(AcceptConnection* c, int evts)
 {
     if (!c->getPostEvent()) {
         mPostAcceptConns.push_back(c);
@@ -143,12 +145,12 @@ void Handler::addPostEvent(AcceptConnection* c, int evts)
     c->addPostEvent(evts);
 }
 
-void Handler::addPostEvent(ConnectConnection* c, int evts)
+inline void Handler::addPostEvent(ConnectConnection* s, int evts)
 {
-    if (!c->getPostEvent()) {
-        mPostConnectConns.push_back(c);
+    if (!s->getPostEvent()) {
+        mPostConnectConns.push_back(s);
     }
-    c->addPostEvent(evts);
+    s->addPostEvent(evts);
 }
 
 void Handler::postAcceptConnectionEvent()
@@ -353,7 +355,6 @@ void Handler::handleAcceptConnectionEvent(AcceptConnection* c, int evts)
     try {
         if (c->good() && (evts & Multiplexor::ReadEvent)) {
             c->readEvent(this);
-            setAcceptConnectionActiveTime(c);
         }
         if (c->good() && (evts & Multiplexor::WriteEvent)) {
             addPostEvent(c, Multiplexor::WriteEvent);
@@ -483,7 +484,7 @@ void Handler::handleRequest(Request* req)
         return;
     }
     auto sp = mProxy->serverPool();
-    Server* serv = sp->getServer(this, req);
+    Server* serv = sp->getServer(this, req, key);
     if (!serv) {
         directResponse(req, Response::NoServer);
         return;
@@ -634,6 +635,7 @@ bool Handler::preHandleRequest(Request* req, const String& key)
 
 void Handler::postHandleRequest(Request* req, ConnectConnection* s)
 {
+    FuncCallTimer();
     auto c = req->connection();
     if (!c) {
         return;
@@ -1127,6 +1129,9 @@ void Handler::configRequest(Request* req, const String& key)
         configGetRequest(req);
     } else if (key.equal("set", true)) {
         configSetRequest(req);
+    } else if (key.equal("resetstat", true)) {
+        mProxy->incrStatsVer();
+        directResponse(req, Response::Ok);
     } else {
         directResponse(req, Response::ConfigSubCmdUnknown);
     }

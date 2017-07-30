@@ -19,7 +19,7 @@ public:
     SentinelServerPool(Proxy* p);
     ~SentinelServerPool();
     void init(const SentinelServerPoolConf& conf);
-    Server* getServer(Handler* h, Request* req) const;
+    Server* getServer(Handler* h, Request* req, const String& key) const;
     Server* iter(int& cursor) const
     {
         return ServerPool::iter(mServPool, cursor);
@@ -34,7 +34,6 @@ private:
 private:
     std::vector<Server*> mSentinels;
     std::vector<Server*> mServPool;
-    std::vector<ServerGroup*> mGroups;
     Distribution mDist;
     Hash mHash;
     char mHashTag[2];

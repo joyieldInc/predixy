@@ -29,6 +29,7 @@ namespace Const
     static const int MaxAddrLen = 128;
     static const int MaxDcLen = 32;
     static const int MaxIOVecLen = IOV_MAX;
+    static const int MaxCmdLen = 32;
     static const int MaxKeyLen = 512;
     static const int BufferAllocCacheSize = 64;
     static const int RequestAllocCacheSize = 32;

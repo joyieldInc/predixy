@@ -33,7 +33,7 @@ ClusterServerPool::~ClusterServerPool()
     }
 }
 
-Server* ClusterServerPool::getServer(Handler* h, Request* req) const
+Server* ClusterServerPool::getServer(Handler* h, Request* req, const String& key) const
 {
     FuncCallTimer();
     switch (req->type()) {
@@ -43,7 +43,6 @@ Server* ClusterServerPool::getServer(Handler* h, Request* req) const
     default:
         break;
     }
-    SegmentStr<Const::MaxKeyLen> key(req->key());
     int i = mHash.hash(key.data(), key.length(), HashTag);
     i &= Const::RedisClusterSlotsMask;
     ServerGroup* g = mSlots[i];

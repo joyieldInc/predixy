@@ -45,19 +45,6 @@ const char* Hash::hashTagStr(const char* buf, int& len, const char* tag)
     return buf;
 }
 
-long Hash::hash(const char* buf, int len) const
-{
-    switch (mType) {
-    case Atol:
-        return atol(buf, len);
-    case Crc16:
-        return crc16(buf, len);
-    default:
-        break;
-    }
-    return 0;
-}
-
 long Hash::atol(const char* buf, int len)
 {
     long v = 0;

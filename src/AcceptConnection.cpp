@@ -198,11 +198,10 @@ void AcceptConnection::parse(Handler* h, Buffer* buf, int pos)
                     req->set(mParser);
                     h->handleRequest(req);
                 } else {
-                    SegmentStr<RequestParser::MaxCmdLen> cmd(mParser.cmd());
                     ResponsePtr res = ResponseAlloc::create();
                     char err[1024];
-                    int len = snprintf(err, sizeof(err), "unknown command '%.*s'",
-                                       cmd.length(), cmd.data());
+                    int len = snprintf(err, sizeof(err), "unknown command '%s'",
+                                       mParser.cmd());
                     res->setErr(err, len);
                     h->handleResponse(nullptr, req, res);
                 }
