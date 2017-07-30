@@ -107,7 +107,7 @@ Show latency monitors by server address and latency name
 
 Reset all stats and latency monitors
 
-    redis> INFO ResetStats
+    redis> CONFIG ResetStat
 
 ## License
 
