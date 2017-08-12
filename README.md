@@ -99,7 +99,7 @@ A latency monitor example:
     <=         1000                67788               77 99.68%
     >          1000               601012              325 100.00%
     T            60              6032643           100001
-    The last line is total summary, 624 is average latency(us)
+    The last line is total summary, 60 is average latency(us)
 
 
 Show latency monitors by server address and latency name
