@@ -110,6 +110,10 @@ Reset all stats and latency monitors, require admin permission.
 
     redis> CONFIG ResetStat
 
+## Benchmark
+See wiki
+[benchmark](https://github.com/joyieldInc/predixy/wiki/Benchmark)
+
 ## License
 
 Copyright (C) 2017 Joyield, Inc. <joyield.com#gmail.com>
