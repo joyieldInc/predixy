@@ -1,6 +1,6 @@
-# Predixy 
+# Predixy [中文版](https://github.com/joyieldInc/predixy/blob/master/README_CN.md)
 
-**Predixy** is a high performance and full features proxy for redis sentinel and redis cluster
+**Predixy** is a high performance and fully featured proxy for redis sentinel and redis cluster
 
 ## Features
 
@@ -11,6 +11,7 @@
 + Supports Redis Cluster.
 + Supports redis block command, eg:blpop, brpop, brpoplpush.
 + Supports scan command, even multi redis instances.
++ Multi-keys command support: mset/msetnx/mget/del/unlink/touch/exists.
 + Multi-databases support, means redis command select is avaliable.
 + Supports redis transaction, limit in Redis Sentinel single redis group.
 + Supports redis Scripts, script load, eval, evalsha.
@@ -24,7 +25,7 @@
 
 ## Build
 
-Predixy can be compiled and used on Linux, OSX, BSD, Windows([Cygwin](http://www.cygwin.com/)).
+Predixy can be compiled and used on Linux, OSX, BSD, Windows([Cygwin](http://www.cygwin.com/)). Requires C++11 compiler.
 
 It is as simple as:
 
@@ -47,10 +48,16 @@ For examples:
     $ make MT=false
     $ make debug MT=false TS=true
 
+## Install
+
+Just copy src/predixy to the install path
+
+    $ cp src/predixy /path/to/bin
+
 ## Configuration
 
 See below files:
-+ predixy.conf, basic config.
++ predixy.conf, basic config, will refrence below config files.
 + cluster.conf, Redis Cluster backend config.
 + sentinel.conf, Redis Sentinel backend config.
 + auth.conf, authority control config.
@@ -59,7 +66,7 @@ See below files:
 
 ## Running
 
-    $ ./predixy ../conf/predixy.conf
+    $ src/predixy conf/predixy.conf
 
 With default predixy.conf, Predixy will listen at 0.0.0.0:7617 and
 proxy to Redis Cluster 127.0.0.1:6379.
@@ -70,7 +77,7 @@ So you will look mass log output, but you can still test it with redis-cli.
 
 More command line arguments:
 
-    $ ./predixy -h
+    $ src/predixy -h
 
 ## Stats
 
@@ -111,6 +118,9 @@ Reset all stats and latency monitors, require admin permission.
     redis> CONFIG ResetStat
 
 ## Benchmark
+
+predixy is fast, how fast? more than twemproxy, codis, redis-cerberus
+
 See wiki
 [benchmark](https://github.com/joyieldInc/predixy/wiki/Benchmark)
 
