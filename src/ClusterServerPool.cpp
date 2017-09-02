@@ -109,8 +109,18 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                         p.master().data());
                 continue;
             }
-            auto it = mServs.find(p.addr());
+            String addr(p.addr());
+            auto it = mServs.find(addr);
             Server* serv = it == mServs.end() ? nullptr : it->second;
+            if (!serv) {
+                if (strstr(p.flags().data(), "myself")) {
+                    serv = s->server();
+                } else if (const char* t = strchr(p.addr().data(), '@')) {
+                    addr = String(p.addr().data(), t - p.addr().data());
+                    it = mServs.find(addr);
+                    serv = it == mServs.end() ? nullptr : it->second;
+                }
+            }
             if (!serv) {
                 const char* flags = p.flags().data();
                 if (p.role() == Server::Unknown ||
@@ -127,7 +137,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                             (int)mServPool.size(), p.addr().data());
                     continue;
                 }
-                serv = new Server(this, p.addr(), false);
+                serv = new Server(this, addr, false);
                 serv->setPassword(password());
                 mServPool.push_back(serv);
                 mServs[serv->addr()] = serv;
