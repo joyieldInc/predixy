@@ -201,12 +201,13 @@ public:
         MultiKey    = 1<<5,
         SMultiKey   = 1<<6,
         MultiKeyVal = 1<<7,
-        KeyAt3      = 1<<8,
-        SubCmd      = 1<<9,
-        Inner       = 1<<10    //proxy use only
+        KeyAt2      = 1<<8,
+        KeyAt3      = 1<<9,
+        SubCmd      = 1<<10,
+        Inner       = 1<<11    //proxy use only
     };
     static const int AuthMask = Read|Write|Admin;
-    static const int KeyMask = NoKey|MultiKey|SMultiKey|MultiKeyVal|KeyAt3;
+    static const int KeyMask = NoKey|MultiKey|SMultiKey|MultiKeyVal|KeyAt2|KeyAt3;
 public:
     Type type;
     const char* name;

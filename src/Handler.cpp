@@ -710,11 +710,11 @@ void Handler::directResponse(Request* req, Response::GenericCode code, ConnectCo
                         id(), c->peer(), c->fd(), req->id(), code, excp.what());
             }
         } else {
-            logInfo("h %d ignore req %ld res code %d c %s %d status %d %s",
+            logDebug("h %d ignore req %ld res code %d c %s %d status %d %s",
                     id(), req->id(), code, c->peer(), c->fd(), c->status(), c->statusStr());
         }
     } else {
-        logInfo("h %d ignore req %ld res code %d without accept connection",
+        logDebug("h %d ignore req %ld res code %d without accept connection",
                 id(), req->id(), code);
     }
 }
@@ -741,7 +741,7 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
     auto sp = mProxy->serverPool();
     AcceptConnection* c = req->connection();
     if (!c) {
-        logInfo("h %d ignore req %ld res %ld", id(), req->id(), res->id());
+        logDebug("h %d ignore req %ld res %ld", id(), req->id(), res->id());
         return;
     } else if (!c->good()) {
         logWarn("h %d ignore req %ld res %ld for c %s %d with status %d %s",
@@ -1288,7 +1288,7 @@ void Handler::configSetRequest(Request* req)
 
 void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
 {
-    logInfo("h %d s %s %d inner req %ld %s res %ld %s",
+    logDebug("h %d s %s %d inner req %ld %s res %ld %s",
             id(), (s ? s->peer() : "None"), (s ? s->fd() : -1),
             req->id(), req->cmd(),
             res->id(), res->typeStr());

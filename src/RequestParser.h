@@ -34,16 +34,16 @@ public:
         KeyLenLF,
         KeyBody,
         KeyBodyLF,
-        ArgTag,      // $           $
-        ArgLen,      // 3           5
-        ArgLenLF,    // \r\n        \r\n
-        ArgBody,     // get         hello
-        ArgBodyLF,   // \r\n        \r\n
-        SArgTag,      // $           $
-        SArgLen,      // 3           5
-        SArgLenLF,    // \r\n        \r\n
-        SArgBody,     // get         hello
-        SArgBodyLF,   // \r\n        \r\n
+        ArgTag,
+        ArgLen,
+        ArgLenLF,
+        ArgBody,
+        ArgBodyLF,
+        SArgTag,
+        SArgLen,
+        SArgLenLF,
+        SArgBody,
+        SArgBodyLF,
         Finished,
 
         Error

@@ -44,6 +44,8 @@ public:
         UnlinkHead,
         PsubscribeHead,
         SubscribeHead,
+        PunsubscribeHead,
+        UnsubscribeHead,
 
         CodeSentinel
     };

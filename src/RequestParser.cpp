@@ -43,6 +43,8 @@ inline bool RequestParser::isKey(bool split) const
         return mArgCnt > 0;
     case Command::MultiKeyVal:
         return split ? (mArgCnt & 1) : mArgCnt == 1;
+    case Command::KeyAt2:
+        return mArgCnt == 2;
     case Command::KeyAt3:
         return mArgCnt == 3;
     default:
@@ -53,10 +55,12 @@ inline bool RequestParser::isKey(bool split) const
 
 inline bool RequestParser::isSplit(bool split) const
 {
-    if (mCommand->mode & (Command::MultiKey|Command::MultiKeyVal)) {
-        return split && mStatus == Normal && isKey(true);
+    if (mCommand->mode & Command::MultiKey) {
+        return split && mStatus == Normal && mArgNum > 2 && isKey(true);
+    } else if (mCommand->mode & Command::MultiKeyVal) {
+        return split && mStatus == Normal && mArgNum > 3 && isKey(true);
     } else if (mCommand->mode & Command::SMultiKey) {
-        return mStatus == Normal;
+        return mStatus == Normal && mArgNum > 2;
     }
     return false;
 }

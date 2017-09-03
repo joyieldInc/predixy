@@ -31,7 +31,9 @@ static const GenericRequest GenericRequestDefs[] = {
     {Request::DelHead,      Command::Del,           "*2\r\n$3\r\ndel\r\n"},
     {Request::UnlinkHead,   Command::Unlink,        "*2\r\n$6\r\nunlink\r\n"},
     {Request::PsubscribeHead,Command::Psubscribe,   "*2\r\n$10\r\npsubscribe\r\n"},
-    {Request::SubscribeHead,Command::Subscribe,     "*2\r\n$9\r\nsubscribe\r\n"}
+    {Request::SubscribeHead,Command::Subscribe,     "*2\r\n$9\r\nsubscribe\r\n"},
+    {Request::PunsubscribeHead,Command::Punsubscribe,   "*2\r\n$12\r\npunsubscribe\r\n"},
+    {Request::UnsubscribeHead,Command::Unsubscribe,     "*2\r\n$11\r\nunsubscribe\r\n"}
 };
 
 thread_local static Request* GenericRequests[Request::CodeSentinel];
@@ -137,8 +139,15 @@ void Request::set(const RequestParser& p, Request* leader)
         case Command::Subscribe:
             r = GenericRequests[SubscribeHead];
             break;
+        case Command::Punsubscribe:
+            r = GenericRequests[PunsubscribeHead];
+            break;
+        case Command::Unsubscribe:
+            r = GenericRequests[UnsubscribeHead];
+            break;
         default:
             //should never reach
+            abort();
             break;
         }
         mHead = r->mReq;
@@ -341,6 +350,15 @@ void Request::setResponse(Response* res)
             }
             break;
         case Command::Msetnx:
+            if (Response* leaderRes = mLeader->getResponse()) {
+                if (!leaderRes->isError() &&
+                     (res->isError() || res->integer() == 0)) {
+                    mLeader->mRes = res;
+                }
+            } else {
+                mLeader->mRes = res;
+            }
+            break;
         case Command::Touch:
         case Command::Exists:
         case Command::Del:
@@ -378,6 +396,8 @@ bool Request::isDone() const
         case Command::Mget:
         case Command::Psubscribe:
         case Command::Subscribe:
+        case Command::Punsubscribe:
+        case Command::Unsubscribe:
             return mDone;
         default:
             break;
