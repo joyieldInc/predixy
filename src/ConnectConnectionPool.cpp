@@ -107,24 +107,6 @@ void ConnectConnectionPool::putPrivateConnection(ConnectConnection* s)
     }
 }
 
-void ConnectConnectionPool::putTransactionConnection(ConnectConnection* s, bool inWatch, bool inMulti)
-{
-    if (s->good()) {
-        if (inMulti) {
-            RequestPtr req = RequestAlloc::create(Request::DiscardServ);
-            mHandler->handleRequest(req, s);
-            logDebug("h %d s %s %d discard req %ld",
-                    mHandler->id(), s->peer(), s->fd(), req->id());
-        } else if (inWatch) {
-            RequestPtr req = RequestAlloc::create(Request::UnwatchServ);
-            mHandler->handleRequest(req, s);
-            logDebug("h %d s %s %d unwatch req %ld",
-                    mHandler->id(), s->peer(), s->fd(), req->id());
-        }
-    }
-    putPrivateConnection(s);
-}
-
 bool ConnectConnectionPool::init(ConnectConnection* c)
 {
     if (!c->setNonBlock()) {

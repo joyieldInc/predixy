@@ -180,15 +180,9 @@ void Handler::postAcceptConnectionEvent()
             mEventLoop->delSocket(c);
             if (auto s = c->connectConnection()) {
                 auto cp = mConnPool[s->server()->id()];
-                if (c->inTransaction()) {
-                    cp->putTransactionConnection(s, c->inPendWatch(), c->inPendMulti());
-                } else if (c->inSub(true)) {
-                    cp->putPrivateConnection(s);
-                    s->setStatus(Connection::LogicError);
-                    addPostEvent(s, Multiplexor::ErrorEvent);
-                } else {
-                    cp->putPrivateConnection(s);
-                }
+                s->setStatus(Connection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                cp->putPrivateConnection(s);
                 c->detachConnectConnection();
                 s->detachAcceptConnection();
             }
@@ -644,6 +638,10 @@ void Handler::postHandleRequest(Request* req, ConnectConnection* s)
     case Command::Blpop:
     case Command::Brpop:
     case Command::Brpoplpush:
+        c->setBlockRequest(true);
+        c->attachConnectConnection(s);
+        s->attachAcceptConnection(c);
+        break;
     case Command::Unwatch:
     case Command::Exec:
     case Command::Discard:
@@ -854,11 +852,11 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
     default:
         break;
     }
-    if (auto cs = c->connectConnection()) {
+    if (s && !s->isShared()) {
         if (!c->inTransaction() && !c->inSub(true)) {
-            mConnPool[cs->server()->id()]->putPrivateConnection(cs);
+            mConnPool[s->server()->id()]->putPrivateConnection(s);
             c->detachConnectConnection();
-            cs->detachAcceptConnection();
+            s->detachAcceptConnection();
         }
     }
 }

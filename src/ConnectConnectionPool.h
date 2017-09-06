@@ -24,7 +24,6 @@ public:
     ConnectConnection* getShareConnection(int db=0);
     ConnectConnection* getPrivateConnection(int db=0);
     void putPrivateConnection(ConnectConnection* s);
-    void putTransactionConnection(ConnectConnection* s, bool inWatch, bool inMulti);
     void check();
     Server* server() const
     {
