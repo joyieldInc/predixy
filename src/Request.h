@@ -129,6 +129,10 @@ public:
     {
         return mDelivered;
     }
+    bool isInline() const
+    {
+        return mInline;
+    }
     void setDelivered()
     {
         mDelivered = true;
@@ -163,6 +167,7 @@ private:
     ResponsePtr mRes;
     bool mDone;
     bool mDelivered;
+    bool mInline;
     Segment mHead; //for multi key command mget/mset/del...
     Segment mReq;
     Segment mKey;

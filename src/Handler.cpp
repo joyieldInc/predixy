@@ -527,7 +527,13 @@ bool Handler::preHandleRequest(Request* req, const String& key)
             directResponse(req, Response::Pong);
         } else {
             ResponsePtr res = ResponseAlloc::create();
-            res->setStr(key.data(), key.length());
+            if (req->isInline()) {
+                SString<Const::MaxKeyLen> k;
+                RequestParser::decodeInlineArg(k, key);
+                res->setStr(k.data(), k.length());
+            } else {
+                res->setStr(key.data(), key.length());
+            }
             handleResponse(nullptr, req, res);
         }
         return true;
@@ -1400,10 +1406,14 @@ bool Handler::permission(Request* req, const String& key, Response::GenericCode&
         return true;
     }
     if (req->type() == Command::Auth) {
+        SString<Const::MaxKeyLen> pw;
+        if (req->isInline()) {
+            RequestParser::decodeInlineArg(pw, key);
+        }
         auto m = mProxy->authority();
         if (!m->hasAuth()) {
             code = Response::NoPasswordSet;
-        } else if (auto auth = m->get(key)) {
+        } else if (auto auth = m->get(req->isInline() ? pw : key)) {
             c->setAuth(auth);
             code = Response::Ok;
         } else {

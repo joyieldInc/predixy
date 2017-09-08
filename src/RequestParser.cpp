@@ -25,6 +25,8 @@ void RequestParser::reset()
     mStatus = Normal;
     mState = Idle;
     mInline = false;
+    mEscape = false;
+    mQuote = '\0';
     mArgNum = 0;
     mArgCnt = 0;
     mArgLen = 0;
@@ -92,9 +94,11 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 mState = InlineBegin;
                 mInline = true;
             }
+            /* NO break */
         case InlineBegin:
-            if (ch == '\r') {
-                error = __LINE__;
+            if (ch == '\n') {
+                mState = Idle;
+                //error = __LINE__;
             } else if (!isspace(ch)) {
                 mReq.begin().buf = buf;
                 mReq.begin().pos = pos;
@@ -107,7 +111,13 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (isspace(ch)) {
                 mCmd[mArgLen < Const::MaxCmdLen ? mArgLen : Const::MaxCmdLen - 1] = '\0';
                 parseCmd();
-                mState = ch == '\r' ? InlineLF : InlineArg;
+                mArgCnt = 1;
+                if (ch == '\n') {
+                    mArgNum = 1;
+                    mState = Finished;
+                    goto Done;
+                }
+                mState = InlineArgBegin;
             } else {
                 if (mArgLen < Const::MaxCmdLen) {
                     mCmd[mArgLen] = tolower(ch);
@@ -115,15 +125,64 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 ++mArgLen;
             }
             break;
-        case InlineArg:
-            if (ch == '\r') {
-                mState = InlineLF;
-            }
-            break;
-        case InlineLF:
+        case InlineArgBegin:
             if (ch == '\n') {
+                mArgNum = mArgCnt;
                 mState = Finished;
                 goto Done;
+            } else if (isspace(ch)) {
+                break;
+            }
+            if (mArgCnt == 1) {
+                mKey.begin().buf = buf;
+                mKey.begin().pos = pos;
+            }
+            mState = InlineArg;
+            /* NO break */
+        case InlineArg:
+            if (mEscape) {
+                mEscape = false;
+            } else if (mQuote) {
+                if (ch == mQuote) {
+                    mState = InlineArgEnd;
+                } else if (ch == '\\') {
+                    mEscape = true;
+                } else if (ch == '\n') {
+                    error = __LINE__;
+                }
+            } else {
+                if (isspace(ch)) {
+                    if (mArgCnt == 1) {
+                        mKey.end().buf = buf;
+                        mKey.end().pos = pos;
+                    }
+                    ++mArgCnt;
+                    if (ch == '\n') {
+                        mArgNum = mArgCnt;
+                        mState = Finished;
+                        goto Done;
+                    } else {
+                        mState = InlineArgBegin;
+                    }
+                } else if (ch == '\'' || ch == '"') {
+                    mQuote = ch;
+                }
+            }
+            break;
+        case InlineArgEnd:
+            if (isspace(ch)) {
+                if (mArgCnt == 1) {
+                    mKey.end().buf = buf;
+                    mKey.end().pos = pos;
+                }
+                ++mArgCnt;
+                if (ch == '\n') {
+                    mArgNum = mArgCnt;
+                    mState = Finished;
+                    goto Done;
+                } else {
+                    mState = InlineArgBegin;
+                }
             } else {
                 error = __LINE__;
             }
@@ -405,7 +464,13 @@ void RequestParser::parseCmd()
     mType = c->type;
     mCommand = c;
     if (mInline) {
-        if (mType != Command::Ping) {
+        switch (mType) {
+        case Command::Ping:
+        case Command::Echo:
+        case Command::Auth:
+        case Command::Select:
+            break;
+        default:
             mStatus = CmdError;
             logNotice("unsupport command %s in inline command protocol", c->name);
             return;

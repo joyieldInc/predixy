@@ -19,8 +19,9 @@ public:
         Idle,        // * or inline command
         InlineBegin,
         InlineCmd,
-        InlineLF,
+        InlineArgBegin,
         InlineArg,
+        InlineArgEnd,
         ArgNum,      // 2
         ArgNumLF,    // \r\n
         CmdTag,
@@ -63,6 +64,8 @@ public:
     ~RequestParser();
     Status parse(Buffer* buf, int& pos, bool split);
     void reset();
+    template<int Size>
+    static bool decodeInlineArg(SString<Size>& dst, const String& src);
     bool isIdle() const
     {
         return mState == Idle;
@@ -116,11 +119,57 @@ private:
     Status mStatus;
     State mState;
     bool mInline;
+    bool mEscape;
+    char mQuote;
     int mArgNum;
     int mArgCnt;
     int mArgLen;
     int mArgBodyCnt;
     int mByteCnt;
 };
+
+template<int Size>
+bool RequestParser::decodeInlineArg(SString<Size>& dst, const String& src)
+{
+    bool ret = true;
+    bool escape = false;
+    char quote = '\0';
+    const char* p = src.data();
+    for (int i = 0; i < src.length(); ++i, ++p) {
+        char c = *p;
+        if (escape) {
+            if (quote == '"') {
+                switch (c) {
+                case 'n': c = '\n'; break;
+                case 'r': c = '\r'; break;
+                case 't': c = '\t'; break;
+                case 'b': c = '\b'; break;
+                case 'a': c = '\a'; break;
+                default: break;
+                }
+            } else {
+                if (!dst.append('\\')) {
+                    ret = false;
+                }
+            }
+            escape = false;
+        } else if (quote) {
+            if (c == '\\') {
+                escape = true;
+                continue;
+            } else if (c == quote) {
+                quote = '\0';
+                continue;
+            }
+        } else if (c == '"' || c == '\'') {
+            quote = c;
+            continue;
+        }
+        if (!dst.append(c)) {
+            ret = false;
+        }
+    }
+    return ret;
+}
 
 #endif

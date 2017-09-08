@@ -57,6 +57,7 @@ Request::Request():
     mType(Command::None),
     mDone(false),
     mDelivered(false),
+    mInline(false),
     mFollowers(0),
     mFollowersDone(0),
     mRedirectCnt(0),
@@ -70,6 +71,7 @@ Request::Request(AcceptConnection* c):
     mType(Command::None),
     mDone(false),
     mDelivered(false),
+    mInline(false),
     mFollowers(0),
     mFollowersDone(0),
     mRedirectCnt(0),
@@ -82,6 +84,7 @@ Request::Request(GenericCode code):
     mConn(nullptr),
     mDone(false),
     mDelivered(false),
+    mInline(false),
     mFollowers(0),
     mFollowersDone(0),
     mRedirectCnt(0),
@@ -164,6 +167,7 @@ void Request::set(const RequestParser& p, Request* leader)
         mReq = p.request();
     }
     mKey = p.key();
+    mInline = p.isInline();
 }
 
 void Request::setAuth(const String& password)
