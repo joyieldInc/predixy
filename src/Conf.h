@@ -65,6 +65,7 @@ struct SentinelServerPoolConf : public ServerPoolConf
     Distribution dist = Distribution::None;
     Hash hash = Hash::None;
     char hashTag[2];
+    std::string sentinelPassword;
     std::vector<ServerConf> sentinels;
     std::vector<ServerGroupConf> groups;
 };

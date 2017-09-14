@@ -312,6 +312,7 @@ void Conf::setSentinelServerPool(const ConfParser::Node* node)
                 Throw(InvalidValue, "%s:%d HashTag invalid", p->file, p->line);
             }
         } else if (setServers(mSentinelServerPool.sentinels, "Sentinels", p)) {
+            mSentinelServerPool.sentinelPassword = p->val;
         } else if (strcasecmp(p->key.c_str(), "Group") == 0) {
             mSentinelServerPool.groups.push_back(ServerGroupConf{p->val});
             if (p->sub) {

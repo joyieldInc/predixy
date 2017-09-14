@@ -35,7 +35,7 @@ void SentinelServerPool::init(const SentinelServerPoolConf& conf)
     for (auto& sc : conf.sentinels) {
         Server* s = new Server(this, sc.addr, true);
         s->setRole(Server::Sentinel);
-        s->setPassword(sc.password.empty() ? conf.password : sc.password);
+        s->setPassword(sc.password.empty() ? conf.sentinelPassword:sc.password);
         mSentinels[i++] = s;
         mServs[s->addr()] = s;
     }
