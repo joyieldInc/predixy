@@ -906,8 +906,8 @@ void Handler::infoRequest(Request* req, const String& key)
     int ret = getrusage(RUSAGE_SELF, &ru);
     if (ret == 0) {
         buf = buf->fappend("MaxRSS:%ld\n", ru.ru_maxrss<<10);
-        buf = buf->fappend("UsedCpuSys:%d.%d\n", ru.ru_stime.tv_sec, ru.ru_stime.tv_usec / 1000);
-        buf = buf->fappend("UsedCpuUser:%d.%d\n", ru.ru_utime.tv_sec, ru.ru_utime.tv_usec / 1000);
+        buf = buf->fappend("UsedCpuSys:%.3f\n", (double)ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1000000.);
+        buf = buf->fappend("UsedCpuUser:%.3f\n", (double)ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1000000.);
     } else {
         logError("h %d getrusage fail %s", id(), StrError());
     }
