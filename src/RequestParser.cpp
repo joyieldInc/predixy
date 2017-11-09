@@ -469,6 +469,7 @@ void RequestParser::parseCmd()
         case Command::Echo:
         case Command::Auth:
         case Command::Select:
+        case Command::Quit:
             break;
         default:
             mStatus = CmdError;

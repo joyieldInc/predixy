@@ -19,6 +19,7 @@ const Command Command::CmdPool[Sentinel] = {
     {AuthServ,          "auth",             2,  2,         Inner},
     {Select,            "select",           2,  2,         Read},
     {SelectServ,        "select",           2,  2,         Inner},
+    {Quit,              "quit",             1,  MaxArgs,   Read},
     {SentinelSentinels, "sentinel sentinels",3, 3,         Inner},
     {SentinelGetMaster, "sentinel get-m-a..",3, 3,         Inner},
     {SentinelSlaves,    "sentinel slaves",  3,  3,         Inner},

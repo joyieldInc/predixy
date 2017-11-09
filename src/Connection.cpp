@@ -9,7 +9,8 @@
 Connection::Connection():
     mPostEvts(0),
     mBufCnt(0),
-    mDb(0)
+    mDb(0),
+    mCloseASAP(false)
 {
 }
 

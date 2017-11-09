@@ -29,6 +29,14 @@ public:
     };
 public:
     Connection();
+    void closeASAP()
+    {
+        mCloseASAP = true;
+    }
+    bool isCloseASAP() const
+    {
+        return mCloseASAP;
+    }
     int getPostEvent() const
     {
         return mPostEvts;
@@ -56,6 +64,7 @@ private:
     BufferPtr mBuf;
     int mBufCnt;
     int mDb;
+    bool mCloseASAP;
 };
 
 #endif

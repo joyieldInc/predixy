@@ -166,11 +166,14 @@ void Handler::postAcceptConnectionEvent()
                 bool ret;
                 if (finished) {
                     ret = mEventLoop->delEvent(c, Multiplexor::WriteEvent);
+                    if (c->isCloseASAP()) {
+                        c->setStatus(AcceptConnection::None);
+                    }
                 } else {
                     ret = mEventLoop->addEvent(c, Multiplexor::WriteEvent);
                 }
                 if (!ret) {
-                    c->setStatus(Multiplexor::ErrorEvent);
+                    c->setStatus(AcceptConnection::IOError);
                 }
             }
         }
@@ -460,7 +463,7 @@ void Handler::handleRequest(Request* req)
 {
     FuncCallTimer();
     auto c = req->connection();
-    if (c && c->isBlockRequest()) {
+    if (c && (c->isBlockRequest() || c->isCloseASAP())) {
         return;
     }
     ++mStats.requests;
@@ -548,6 +551,12 @@ bool Handler::preHandleRequest(Request* req, const String& key)
                 }
             }
             directResponse(req, Response::InvalidDb);
+        }
+        return true;
+    case Command::Quit:
+        directResponse(req, Response::Ok);
+        if (c) {
+            c->closeASAP();
         }
         return true;
     case Command::Cmd:

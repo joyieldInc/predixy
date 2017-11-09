@@ -25,6 +25,7 @@ public:
         AuthServ,
         Select,
         SelectServ,
+        Quit,
 
         SentinelSentinels,
         SentinelGetMaster,
