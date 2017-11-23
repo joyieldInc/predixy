@@ -10,8 +10,8 @@
 #include "Request.h"
 
 
-Auth::Auth():
-    mMode(Command::Read|Command::Write|Command::Admin),
+Auth::Auth(int mode):
+    mMode(mode),
     mReadKeyPrefix(nullptr),
     mWriteKeyPrefix(nullptr)
 {
@@ -75,10 +75,11 @@ bool Auth::permission(Request* req, const String& key) const
     return true;
 }
 
-Auth Authority::DefaultAuth;
+Auth Authority::AuthAllowAll;
+Auth Authority::AuthDenyAll(0);
 
 Authority::Authority():
-    mDefault(&DefaultAuth)
+    mDefault(&AuthAllowAll)
 {
 }
 
@@ -102,5 +103,7 @@ void Authority::add(const AuthConf& ac)
     mAuthMap[a->password()] = a;
     if (a->password().empty()) {
         mDefault = a;
+    } else if (mDefault == &AuthAllowAll) {
+        mDefault = &AuthDenyAll;
     }
 }

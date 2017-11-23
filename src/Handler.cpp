@@ -889,96 +889,109 @@ void Handler::infoRequest(Request* req, const String& key)
         infoServerLatencyRequest(req);
         return;
     }
+    bool all = key.equal("All", true);
+    bool empty = key.empty();
     ResponsePtr res = ResponseAlloc::create();
     res->setType(Reply::String);
     Segment& body = res->body();
-    BufferPtr buf = body.fset(nullptr, "# Proxy\n");
-    buf = buf->fappend("Version:%s\n", _PREDIXY_VERSION_);
-    buf = buf->fappend("Name:%s\n", mProxy->conf()->name());
-    buf = buf->fappend("Bind:%s\n", mProxy->conf()->bind());
-    buf = buf->fappend("RedisMode:proxy\n");
+    Buffer* buf = body.fset(nullptr, "");
+
+#define Scope(all, empty, header) ((all || empty || key.equal(header, true)) ? \
+        (buf = buf->fappend("# %s\n", header)) : nullptr)
+
+    if (Scope(all, empty, "Proxy")) {
+        buf = buf->fappend("Version:%s\n", _PREDIXY_VERSION_);
+        buf = buf->fappend("Name:%s\n", mProxy->conf()->name());
+        buf = buf->fappend("Bind:%s\n", mProxy->conf()->bind());
+        buf = buf->fappend("RedisMode:proxy\n");
 #ifdef _PREDIXY_SINGLE_THREAD_
-    buf = buf->fappend("SingleThread:true\n");
+        buf = buf->fappend("SingleThread:true\n");
 #else
-    buf = buf->fappend("SingleThread:false\n");
+        buf = buf->fappend("SingleThread:false\n");
 #endif
-    buf = buf->fappend("WorkerThreads:%d\n", mProxy->conf()->workerThreads());
-    SString<32> timeStr;
-    timeStr.strftime("%Y-%m-%d %H:%M:%S", mProxy->startTime());
-    buf = buf->fappend("UptimeSince:%s\n", timeStr.data());
-    buf = buf->fappend("\n");
-
-    buf = buf->fappend("# SystemResource\n");
-    buf = buf->fappend("UsedMemory:%ld\n", AllocBase::getUsedMemory());
-    buf = buf->fappend("MaxMemory:%ld\n", AllocBase::getMaxMemory());
-    struct rusage ru;
-    int ret = getrusage(RUSAGE_SELF, &ru);
-    if (ret == 0) {
-        buf = buf->fappend("MaxRSS:%ld\n", ru.ru_maxrss<<10);
-        buf = buf->fappend("UsedCpuSys:%.3f\n", (double)ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1000000.);
-        buf = buf->fappend("UsedCpuUser:%.3f\n", (double)ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1000000.);
-    } else {
-        logError("h %d getrusage fail %s", id(), StrError());
-    }
-    buf = buf->fappend("\n");
-
-    buf = buf->fappend("# Stats\n");
-    HandlerStats st(mStats);
-    for (auto h : mProxy->handlers()) {
-        if (h == this) {
-            continue;
-        }
-        st += h->mStats;
-    }
-    buf = buf->fappend("Accept:%ld\n", st.accept);
-    buf = buf->fappend("ClientConnections:%ld\n", st.clientConnections);
-    buf = buf->fappend("TotalRequests:%ld\n", st.requests);
-    buf = buf->fappend("TotalResponses:%ld\n", st.responses);
-    buf = buf->fappend("TotalRecvClientBytes:%ld\n", st.recvClientBytes);
-    buf = buf->fappend("TotalSendServerBytes:%ld\n", st.sendServerBytes);
-    buf = buf->fappend("TotalRecvServerBytes:%ld\n", st.recvServerBytes);
-    buf = buf->fappend("TotalSendClientBytes:%ld\n", st.sendClientBytes);
-    buf = buf->fappend("\n");
-
-    buf = buf->fappend("# Servers\n");
-    int servCursor = 0;
-    auto sp = mProxy->serverPool();
-    while (Server* serv = sp->iter(servCursor)) {
-        ServerStats st;
-        for (auto h : mProxy->handlers()) {
-            if (auto cp = h->getConnectConnectionPool(serv->id())) {
-                st += cp->stats();
-            }
-        }
-        buf->fappend("Server:%s\n", serv->addr().data());
-        buf->fappend("Role:%s\n", serv->roleStr());
-        auto g = serv->group();
-        buf->fappend("Group:%s\n", g ? g->name().data() : "");
-        buf->fappend("DC:%s\n", serv->dcName().data());
-        buf->fappend("CurrentIsFail:%d\n", (int)serv->fail());
-        buf->fappend("Connections:%d\n", st.connections);
-        buf->fappend("Connect:%ld\n", st.connect);
-        buf->fappend("Requests:%ld\n", st.requests);
-        buf->fappend("Responses:%ld\n", st.responses);
-        buf->fappend("SendBytes:%ld\n", st.sendBytes);
-        buf->fappend("RecvBytes:%ld\n", st.recvBytes);
+        buf = buf->fappend("WorkerThreads:%d\n", mProxy->conf()->workerThreads());
+        buf = buf->fappend("Uptime:%ld\n", (long)mProxy->startTime());
+        SString<32> timeStr;
+        timeStr.strftime("%Y-%m-%d %H:%M:%S", mProxy->startTime());
+        buf = buf->fappend("UptimeSince:%s\n", timeStr.data());
         buf = buf->fappend("\n");
     }
-    buf = buf->fappend("\n");
 
-    buf = buf->fappend("# LatencyMonitor\n");
-    LatencyMonitor lm;
-    for (size_t i = 0; i < mLatencyMonitors.size(); ++i) {
-        lm = mLatencyMonitors[i];
+    if (Scope(all, empty, "SystemResource")) {
+        buf = buf->fappend("UsedMemory:%ld\n", AllocBase::getUsedMemory());
+        buf = buf->fappend("MaxMemory:%ld\n", AllocBase::getMaxMemory());
+        struct rusage ru;
+        int ret = getrusage(RUSAGE_SELF, &ru);
+        if (ret == 0) {
+            buf = buf->fappend("MaxRSS:%ld\n", ru.ru_maxrss<<10);
+            buf = buf->fappend("UsedCpuSys:%.3f\n", (double)ru.ru_stime.tv_sec + ru.ru_stime.tv_usec / 1000000.);
+            buf = buf->fappend("UsedCpuUser:%.3f\n", (double)ru.ru_utime.tv_sec + ru.ru_utime.tv_usec / 1000000.);
+        } else {
+            logError("h %d getrusage fail %s", id(), StrError());
+        }
+        buf = buf->fappend("\n");
+    }
+
+    if (Scope(all, empty, "Stats")) {
+        HandlerStats st(mStats);
         for (auto h : mProxy->handlers()) {
             if (h == this) {
                 continue;
             }
-            lm += h->mLatencyMonitors[i];
+            st += h->mStats;
         }
-        buf = buf->fappend("LatencyMonitorName:%s\n", lm.name().data());
-        buf = lm.output(buf);
+        buf = buf->fappend("Accept:%ld\n", st.accept);
+        buf = buf->fappend("ClientConnections:%ld\n", st.clientConnections);
+        buf = buf->fappend("TotalRequests:%ld\n", st.requests);
+        buf = buf->fappend("TotalResponses:%ld\n", st.responses);
+        buf = buf->fappend("TotalRecvClientBytes:%ld\n", st.recvClientBytes);
+        buf = buf->fappend("TotalSendServerBytes:%ld\n", st.sendServerBytes);
+        buf = buf->fappend("TotalRecvServerBytes:%ld\n", st.recvServerBytes);
+        buf = buf->fappend("TotalSendClientBytes:%ld\n", st.sendClientBytes);
         buf = buf->fappend("\n");
+    }
+
+    if (Scope(all, empty, "Servers")) {
+        int servCursor = 0;
+        auto sp = mProxy->serverPool();
+        while (Server* serv = sp->iter(servCursor)) {
+            ServerStats st;
+            for (auto h : mProxy->handlers()) {
+                if (auto cp = h->getConnectConnectionPool(serv->id())) {
+                    st += cp->stats();
+                }
+            }
+            buf->fappend("Server:%s\n", serv->addr().data());
+            buf->fappend("Role:%s\n", serv->roleStr());
+            auto g = serv->group();
+            buf->fappend("Group:%s\n", g ? g->name().data() : "");
+            buf->fappend("DC:%s\n", serv->dcName().data());
+            buf->fappend("CurrentIsFail:%d\n", (int)serv->fail());
+            buf->fappend("Connections:%d\n", st.connections);
+            buf->fappend("Connect:%ld\n", st.connect);
+            buf->fappend("Requests:%ld\n", st.requests);
+            buf->fappend("Responses:%ld\n", st.responses);
+            buf->fappend("SendBytes:%ld\n", st.sendBytes);
+            buf->fappend("RecvBytes:%ld\n", st.recvBytes);
+            buf = buf->fappend("\n");
+        }
+        buf = buf->fappend("\n");
+    }
+
+    if (Scope(all, empty, "LatencyMonitor")) {
+        LatencyMonitor lm;
+        for (size_t i = 0; i < mLatencyMonitors.size(); ++i) {
+            lm = mLatencyMonitors[i];
+            for (auto h : mProxy->handlers()) {
+                if (h == this) {
+                    continue;
+                }
+                lm += h->mLatencyMonitors[i];
+            }
+            buf = buf->fappend("LatencyMonitorName:%s\n", lm.name().data());
+            buf = lm.output(buf);
+            buf = buf->fappend("\n");
+        }
     }
 
     buf = buf->fappend("\r\n");

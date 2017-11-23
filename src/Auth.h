@@ -15,7 +15,7 @@
 class Auth
 {
 public:
-    Auth();
+    Auth(int mode = Command::Read|Command::Write|Command::Admin);
     Auth(const AuthConf& conf);
     ~Auth();
     const String& password() const
@@ -53,7 +53,8 @@ public:
 private:
     std::map<String, Auth*> mAuthMap;
     Auth* mDefault;
-    static Auth DefaultAuth;
+    static Auth AuthAllowAll;
+    static Auth AuthDenyAll;
 };
 
 #endif
