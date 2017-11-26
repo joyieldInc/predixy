@@ -961,18 +961,18 @@ void Handler::infoRequest(Request* req, const String& key)
                     st += cp->stats();
                 }
             }
-            buf->fappend("Server:%s\n", serv->addr().data());
-            buf->fappend("Role:%s\n", serv->roleStr());
+            buf = buf->fappend("Server:%s\n", serv->addr().data());
+            buf = buf->fappend("Role:%s\n", serv->roleStr());
             auto g = serv->group();
-            buf->fappend("Group:%s\n", g ? g->name().data() : "");
-            buf->fappend("DC:%s\n", serv->dcName().data());
-            buf->fappend("CurrentIsFail:%d\n", (int)serv->fail());
-            buf->fappend("Connections:%d\n", st.connections);
-            buf->fappend("Connect:%ld\n", st.connect);
-            buf->fappend("Requests:%ld\n", st.requests);
-            buf->fappend("Responses:%ld\n", st.responses);
-            buf->fappend("SendBytes:%ld\n", st.sendBytes);
-            buf->fappend("RecvBytes:%ld\n", st.recvBytes);
+            buf = buf->fappend("Group:%s\n", g ? g->name().data() : "");
+            buf = buf->fappend("DC:%s\n", serv->dcName().data());
+            buf = buf->fappend("CurrentIsFail:%d\n", (int)serv->fail());
+            buf = buf->fappend("Connections:%d\n", st.connections);
+            buf = buf->fappend("Connect:%ld\n", st.connect);
+            buf = buf->fappend("Requests:%ld\n", st.requests);
+            buf = buf->fappend("Responses:%ld\n", st.responses);
+            buf = buf->fappend("SendBytes:%ld\n", st.sendBytes);
+            buf = buf->fappend("RecvBytes:%ld\n", st.recvBytes);
             buf = buf->fappend("\n");
         }
         buf = buf->fappend("\n");
