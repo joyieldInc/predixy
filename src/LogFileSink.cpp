@@ -118,7 +118,9 @@ bool LogFileSink::reopen(time_t t)
         }
         if (mFileSuffixFmt) {
             unlink(mFileName.c_str());
-            if (symlink(mFilePath, mFileName.c_str()) == -1) {
+            const char* name = strrchr(mFilePath, '/');
+            name = name ? name + 1 : mFilePath;
+            if (symlink(name, mFileName.c_str()) == -1) {
                 fprintf(stderr, "create symbol link for %s fail", mFileName.c_str());
             }
         }
@@ -135,9 +137,9 @@ bool LogFileSink::setFile(const char* path, int rotateSecs, long rotateBytes)
         if (len > 4 && strcasecmp(path + len - 4, ".log") == 0) {
             len -= 4;
         }
-        if (len + FileSuffixReserveLen >= MaxPathLen) {
-            return false;
-        }
+    }
+    if (len + FileSuffixReserveLen >= MaxPathLen) {
+        return false;
     }
     mFileName = path;
     mFilePathLen = len;

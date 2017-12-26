@@ -899,7 +899,8 @@ void Handler::infoRequest(Request* req, const String& key)
 #define Scope(all, empty, header) ((all || empty || key.equal(header, true)) ? \
         (buf = buf->fappend("# %s\n", header)) : nullptr)
 
-    if (Scope(all, empty, "Proxy")) {
+    if (all || empty || key.equal("Proxy", true) || key.equal("Server", true)) {
+        buf = buf->fappend("# %s\n", "Proxy");
         buf = buf->fappend("Version:%s\n", _PREDIXY_VERSION_);
         buf = buf->fappend("Name:%s\n", mProxy->conf()->name());
         buf = buf->fappend("Bind:%s\n", mProxy->conf()->bind());
@@ -1196,6 +1197,11 @@ void Handler::configGetRequest(Request* req)
     }
 
     do {
+        Append("Name", "%s", conf->name());
+        Append("Bind", "%s", conf->bind());
+        Append("WorkerThreads", "%d", conf->workerThreads());
+        Append("BufSize", "%d", Buffer::getSize());
+        Append("LocalDC", "%s", conf->localDC().c_str());
         Append("MaxMemory", "%ld", AllocBase::getMaxMemory());
         Append("ClientTimeout", "%d", conf->clientTimeout() / 1000000);
         Append("AllowMissLog", "%s", log->allowMissLog() ? "true" : "false");
