@@ -586,7 +586,7 @@ bool Conf::setServers(std::vector<ServerConf>& servs, const char* name, const Co
         return false;
     }
     if (!p->sub) {
-        Throw(InvalidValue, "%s:%d %s require scope value", name, p->file, p->line);
+        Throw(InvalidValue, "%s:%d %s require scope value", p->file, p->line, name);
     }
     for (auto n = p->sub; n; n = n->next) {
         if (strcasecmp(n->key.c_str(), "+") == 0) {
