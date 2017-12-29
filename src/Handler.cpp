@@ -1200,7 +1200,7 @@ void Handler::configGetRequest(Request* req)
         Append("Name", "%s", conf->name());
         Append("Bind", "%s", conf->bind());
         Append("WorkerThreads", "%d", conf->workerThreads());
-        Append("BufSize", "%d", Buffer::getSize());
+        Append("BufSize", "%d", Buffer::getSize() + sizeof(Buffer));
         Append("LocalDC", "%s", conf->localDC().c_str());
         Append("MaxMemory", "%ld", AllocBase::getMaxMemory());
         Append("ClientTimeout", "%d", conf->clientTimeout() / 1000000);

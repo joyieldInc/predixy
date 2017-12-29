@@ -148,7 +148,6 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                             p.master().data(),
                             serv->dcName().data());
             } else {
-                serv->setOnline(true);
                 serv->setUpdating(false);
             }
             serv->setRole(p.role());
@@ -192,12 +191,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
     }
     for (auto serv : mServPool) {
         if (serv->updating()) {
-            serv->setOnline(false);
             serv->setUpdating(false);
-            if (ServerGroup* g = serv->group()) {
-                g->remove(serv);
-                serv->setGroup(nullptr);
-            }
             continue;
         }
         if (serv->role() == Server::Master) {

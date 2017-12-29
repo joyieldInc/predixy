@@ -1,5 +1,5 @@
 CXX ?= g++
-LVL ?= -O3
+LVL ?= -g -O3
 Opts += $(LVL)
 
 ifeq ($(MT), false)

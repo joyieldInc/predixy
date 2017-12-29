@@ -275,6 +275,18 @@ AddrParser::Status AddrParser::parse(SString<Const::MaxAddrLen>& addr)
     return mState != Invalid ? Done : Error;
 }
 
+static bool hasValidPort(const String& addr)
+{
+    const char* p = addr.data() + addr.length();
+    for (int i = 0; i < addr.length(); ++i) {
+        if (*(--p) == ':') {
+            int port = atoi(p + 1);
+            return port > 0 && port < 65536;
+        }
+    }
+    return false;
+}
+
 void SentinelServerPool::handleSentinels(Handler* h, ConnectConnection* s, Request* req, Response* res)
 {
     if (!res || !res->isArray()) {
@@ -286,6 +298,11 @@ void SentinelServerPool::handleSentinels(Handler* h, ConnectConnection* s, Reque
         auto st = parser.parse(addr);
         if (st == AddrParser::Ok) {
             logDebug("sentinel server pool parse sentinel %s", addr.data());
+            if (!hasValidPort(addr)) {
+                logNotice("sentinel server pool parse sentienl %s invalid",
+                        addr.data());
+                continue;
+            }
             auto it = mServs.find(addr);
             Server* serv = it == mServs.end() ? nullptr : it->second;
             if (!serv) {
