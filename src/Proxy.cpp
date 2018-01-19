@@ -26,10 +26,10 @@ static bool Stop = false;
 
 static void abortHandler(int sig)
 {
-    Abort = true;
-    if (sig == SIGABRT) {
+    if (!Abort) {
         traceInfo();
     }
+    Abort = true;
     if (!Running) {
         abort();
     }
