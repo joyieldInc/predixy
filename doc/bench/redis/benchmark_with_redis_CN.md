@@ -53,6 +53,7 @@
 ![这里写图片描述](https://github.com/joyieldInc/predixy/blob/master/doc/bench/redis/predixy_pipeline_get.png)
 
 图片还是不方便看，我们总结为表格：
+
 |测试\指标|redis used|redis user|redis sys|predixy used|predixy user|predixy sys|redis qps|predixy qps|
 |--|--|--|--|--|--|--|--|--|
 |redis set|0.990|0.247|0.744|0|0|0|167000|3|
@@ -89,7 +90,7 @@
 ![mt_predixy_get](https://github.com/joyieldInc/predixy/blob/master/doc/bench/redis/mt_predixy_pipeline_get.png)
 
 |测试\指标|redis used|redis user|redis sys|predixy used|predixy user|predixy sys|redis qps|predixy qps|
-|--|--|--|--|--|--|--|--|
+|--|--|--|--|--|--|--|--|--|
 |predixy pipeline set|1.01|0.93|0.07|1.37|0.97|0.41|762000|762000|
 |predixy pipeline get|0.93|0.85|0.08|2.57|1.85|0.72|1718000|1718000|
 
