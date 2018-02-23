@@ -49,8 +49,6 @@ Conf::Conf():
     mLogSample[LogLevel::Notice] = 1;
     mLogSample[LogLevel::Warn] = 1;
     mLogSample[LogLevel::Error] = 1;
-    mSentinelServerPool.refreshInterval = 1;
-    mClusterServerPool.refreshInterval = 1;
 }
 
 Conf::~Conf()
@@ -249,11 +247,15 @@ bool Conf::setServerPool(ServerPoolConf& sp, const ConfParser::Node* p)
         return true;
     } else if (setInt(sp.dynamicSlaveReadPriority, "DynamicSlaveReadPriority", p, 0, 100)) {
         return true;
-    } else if (setInt(sp.refreshInterval, "RefreshInterval", p, 1)) {
+    } else if (setDuration(sp.refreshInterval, "RefreshInterval", p)) {
+        return true;
+    } else if (setDuration(sp.serverTimeout, "ServerTimeout", p)) {
         return true;
     } else if (setInt(sp.serverFailureLimit, "ServerFailureLimit", p, 1)) {
         return true;
-    } else if (setInt(sp.serverRetryTimeout, "ServerRetryTimeout", p, 1)) {
+    } else if (setDuration(sp.serverRetryTimeout, "ServerRetryTimeout", p)) {
+        return true;
+    } else if (setInt(sp.keepalive, "KeepAlive", p, 0)) {
         return true;
     } else if (setInt(sp.databases, "Databases", p, 1, 128)) {
         return true;
@@ -568,6 +570,27 @@ bool Conf::parseMemory(long& m, const char* str)
     return m >= 0;
 }
 
+bool Conf::parseDuration(long& v, const char* str)
+{
+    char u[4];
+    int c = sscanf(str, "%ld%3s", &v, u);
+    if (c == 2 && v > 0) {
+        if (strcasecmp(u, "s") == 0) {
+            v *= 1000000;
+        } else if (strcasecmp(u, "m") == 0 || strcasecmp(u, "ms") == 0) {
+            v *= 1000;
+        } else if (strcasecmp(u, "u") == 0 || strcasecmp(u, "us") == 0) {
+        } else {
+            return false;
+        }
+    } else if (c == 1) {
+        v *= 1000000;
+    } else {
+        return false;
+    }
+    return v >= 0;
+}
+
 bool Conf::setMemory(long& m, const char* name, const ConfParser::Node* n)
 {
     if (strcasecmp(name, n->key.c_str()) != 0) {
@@ -575,6 +598,18 @@ bool Conf::setMemory(long& m, const char* name, const ConfParser::Node* n)
     }
     if (!parseMemory(m, n->val.c_str())) {
         Throw(InvalidValue, "%s:%d %s invalid memory value \"%s\"",
+                n->file, n->line, name, n->val.c_str());
+    }
+    return true;
+}
+
+bool Conf::setDuration(long& v, const char* name, const ConfParser::Node* n)
+{
+    if (strcasecmp(name, n->key.c_str()) != 0) {
+        return false;
+    }
+    if (!parseDuration(v, n->val.c_str())) {
+        Throw(InvalidValue, "%s:%d %s invalid duration value \"%s\"",
                 n->file, n->line, name, n->val.c_str());
     }
     return true;

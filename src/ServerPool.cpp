@@ -18,9 +18,11 @@ void ServerPool::init(const ServerPoolConf& conf)
     mMasterReadPriority = conf.masterReadPriority;
     mStaticSlaveReadPriority = conf.staticSlaveReadPriority;
     mDynamicSlaveReadPriority = conf.dynamicSlaveReadPriority;
-    mRefreshInterval = conf.refreshInterval * 1000000;
+    mRefreshInterval = conf.refreshInterval;
+    mServerTimeout = conf.serverTimeout;
     mServerFailureLimit = conf.serverFailureLimit;
-    mServerRetryTimeout = conf.serverRetryTimeout * 1000000;
+    mServerRetryTimeout = conf.serverRetryTimeout;
+    mKeepAlive = conf.keepalive;
     mDbNum = conf.databases;
 }
 

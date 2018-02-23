@@ -155,6 +155,31 @@ bool Socket::setTcpNoDelay(bool val)
     return ret == 0;
 }
 
+bool Socket::setTcpKeepAlive(int interval)
+{
+    int val = 1;
+    int ret = setsockopt(mFd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val));
+    if (ret != 0) {
+        return false;
+    }
+    val = interval;
+    ret = setsockopt(mFd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val));
+    if (ret != 0) {
+        return false;
+    }
+    val = interval / 3;
+    ret = setsockopt(mFd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val));
+    if (ret != 0) {
+        return false;
+    }
+    val = 3;
+    ret = setsockopt(mFd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val));
+    if (ret != 0) {
+        return false;
+    }
+    return true;
+}
+
 int Socket::read(void* buf, int cnt)
 {
     FuncCallTimer();

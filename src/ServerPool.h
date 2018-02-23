@@ -56,6 +56,10 @@ public:
     {
         return mRefreshInterval;
     }
+    long serverTimeout() const
+    {
+        return mServerTimeout;
+    }
     int serverFailureLimit() const
     {
         return mServerFailureLimit;
@@ -63,6 +67,10 @@ public:
     long serverRetryTimeout() const
     {
         return mServerRetryTimeout;
+    }
+    int keepalive() const
+    {
+        return mKeepAlive;
     }
     int dbNum() const
     {
@@ -133,8 +141,10 @@ private:
     int mStaticSlaveReadPriority;
     int mDynamicSlaveReadPriority;
     long mRefreshInterval;
+    long mServerTimeout;
     int mServerFailureLimit;
     long mServerRetryTimeout;
+    int mKeepAlive;
     int mDbNum;
 };
 

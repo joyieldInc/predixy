@@ -73,6 +73,11 @@ public:
     {
         return mSendRequests.size() + mSentRequests.size();
     }
+    Request* frontRequest() const
+    {
+        return !mSentRequests.empty() ? mSentRequests.front() :
+              (!mSendRequests.empty() ? mSendRequests.front() : nullptr);
+    }
 private:
     void parse(Handler* h, Buffer* buf, int pos);
     void handleResponse(Handler* h);

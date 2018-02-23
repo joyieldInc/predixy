@@ -30,12 +30,14 @@ ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
                 mHandler->id(), db, (int)mShareConns.size());
         return nullptr;
     }
+    bool needInit = false;
     ConnectConnection* c = mShareConns[db];
     if (!c) {
         c = ConnectConnectionAlloc::create(mServ, true);
         c->setDb(db);
         ++mStats.connections;
         mShareConns[db] = c;
+        needInit = true;
         logNotice("h %d create server connection %s %d",
                   mHandler->id(), c->peer(), c->fd());
     } else if (c->fd() < 0) {
@@ -43,16 +45,19 @@ ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
             return nullptr;
         }
         c->reopen();
+        needInit = true;
         logNotice("h %d reopen server connection %s %d",
                   mHandler->id(), c->peer(), c->fd());
-    } else {
-        return c;
     }
-    if (!init(c)) {
+    if (needInit && !init(c)) {
         c->close(mHandler);
         return nullptr;
     }
+    if (mServ->fail() || c->isConnecting()) {
+        return nullptr;
+    }
     return c;
+    return mServ->fail() ? nullptr : c;
 }
 
 ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
@@ -91,7 +96,7 @@ ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
         ccl.push_back(c);
         return nullptr;
     }
-    return c;
+    return mServ->fail() ? nullptr : c;
 }
 
 void ConnectConnectionPool::putPrivateConnection(ConnectConnection* s)
@@ -118,6 +123,11 @@ bool ConnectConnectionPool::init(ConnectConnection* c)
         logWarn("h %d s %s %d settcpnodelay fail %s",
                 mHandler->id(), c->peer(), c->fd(), StrError());
     }
+    auto sp = mHandler->proxy()->serverPool();
+    if (sp->keepalive() > 0 && !c->setTcpKeepAlive(sp->keepalive())) {
+        logWarn("h %d s %s %d settcpkeepalive(%d) fail %s",
+                mHandler->id(), c->peer(), c->fd(), sp->keepalive(),StrError());
+    }
     auto m = mHandler->eventLoop();
     if (!m->addSocket(c, Multiplexor::ReadEvent|Multiplexor::WriteEvent)) {
         logWarn("h %d s %s %d add to eventloop fail",
@@ -141,7 +151,6 @@ bool ConnectConnectionPool::init(ConnectConnection* c)
         logDebug("h %d s %s %d auth req %ld",
                 mHandler->id(), c->peer(), c->fd(), req->id());
     }
-    auto sp = mHandler->proxy()->serverPool();
     if (sp->type() == ServerPool::Cluster) {
         RequestPtr req = RequestAlloc::create(Request::Readonly);
         mHandler->handleRequest(req, c);

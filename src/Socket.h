@@ -46,7 +46,7 @@ public:
         EventError,
         ExceptError,
 
-        CustomStatus
+        CustomStatus = 100
     };
 public:
     Socket(int fd = -1);
@@ -59,6 +59,7 @@ public:
     void close();
     bool setNonBlock(bool val = true);
     bool setTcpNoDelay(bool val = true);
+    bool setTcpKeepAlive(int interval);
     int read(void* buf, int cnt);
     int write(const void* buf, int cnt);
     int writev(const struct iovec* vecs, int cnt);

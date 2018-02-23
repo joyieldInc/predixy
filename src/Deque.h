@@ -86,6 +86,11 @@ public:
     {
         return node(obj)->next(Idx);
     }
+    bool exist(T* obj) const
+    {
+        auto n = node(obj);
+        return n->prev(Idx) != nullptr || n->next(Idx) != nullptr || n == mHead;
+    }
     void push_back(T* obj)
     {
         N* p = static_cast<N*>(obj);

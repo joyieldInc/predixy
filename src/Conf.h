@@ -49,9 +49,11 @@ struct ServerPoolConf
     int masterReadPriority = 50;
     int staticSlaveReadPriority = 0;
     int dynamicSlaveReadPriority = 0;
-    int refreshInterval = 1;    //seconds
+    long refreshInterval = 1000000;    //us
+    long serverTimeout = 1000000; //us
     int serverFailureLimit = 10;
-    int serverRetryTimeout = 1; //seconds
+    long serverRetryTimeout = 1000000; //us
+    int keepalive = 120; //seconds
     int databases = 1;
 };
 
@@ -180,6 +182,7 @@ public:
     }
 public:
     static bool parseMemory(long& m, const char* str);
+    static bool parseDuration(long& v, const char* str);
 private:
     void setGlobal(const ConfParser::Node* node);
     void setAuthority(const ConfParser::Node* node);
@@ -193,6 +196,7 @@ private:
     bool setLong(long& attr, const char* name, const ConfParser::Node* n, long lower = LONG_MIN, long upper = LONG_MAX);
     bool setBool(bool& attr, const char* name, const ConfParser::Node* n);
     bool setMemory(long& mem, const char* name, const ConfParser::Node* n);
+    bool setDuration(long& v, const char* name, const ConfParser::Node* n);
     bool setServers(std::vector<ServerConf>& servs, const char* name, const ConfParser::Node* n);
     void setDC(DCConf& dc, const ConfParser::Node* n);
     void setReadPolicy(ReadPolicyConf& c, const ConfParser::Node* n);

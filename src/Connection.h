@@ -25,7 +25,8 @@ public:
     enum StatusEnum
     {
         ParseError = Socket::CustomStatus,
-        LogicError
+        LogicError,
+        TimeoutError
     };
 public:
     Connection();

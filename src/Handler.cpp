@@ -62,6 +62,13 @@ void Handler::run()
         }
         refreshServerPool();
         checkConnectionPool();
+        timeout = mProxy->serverPool()->serverTimeout();
+        if (timeout > 0) {
+            int num = checkServerTimeout(timeout);
+            if (num > 0) {
+                postEvent();
+            }
+        }
         if (mStatsVer < mProxy->statsVer()) {
             resetStats();
         }
@@ -101,6 +108,29 @@ void Handler::checkConnectionPool()
                       id(), p->server()->addr().data(), excp.what());
         }
     }
+}
+
+int Handler::checkServerTimeout(long timeout)
+{
+    int num = 0;
+    auto now = Util::elapsedUSec();
+    auto n = mWaitConnectConns.front();
+    while (n) {
+        auto s = n;
+        n = mWaitConnectConns.next(n);
+        if (auto req = s->frontRequest()) {
+            long elapsed = now - req->createTime();
+            if (elapsed >= timeout) {
+                s->setStatus(Connection::TimeoutError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                mWaitConnectConns.remove(s);
+                ++num;
+            }
+        } else {
+            mWaitConnectConns.remove(s);
+        }
+    }
+    return num;
 }
 
 void Handler::handleEvent(Socket* s, int evts)
@@ -216,6 +246,10 @@ void Handler::postConnectConnectionEvent()
                 }
                 if (!ret) {
                     s->setStatus(Multiplexor::ErrorEvent);
+                } else {
+                    if (s->isShared() && !mWaitConnectConns.exist(s)) {
+                        mWaitConnectConns.push_back(s);
+                    }
                 }
             }
         }
@@ -384,6 +418,8 @@ void Handler::handleConnectConnectionEvent(ConnectConnection* s, int evts)
         if (s->good() && (evts & Multiplexor::WriteEvent)) {
             if (s->isConnecting()) {
                 s->setConnected();
+                logDebug("h %d s %s %d connected",
+                        id(), s->peer(), s->fd());
             }
             addPostEvent(s, Multiplexor::WriteEvent);
         }

@@ -96,6 +96,7 @@ private:
     void refreshServerPool();
     void checkConnectionPool();
     int checkClientTimeout(long timeout);
+    int checkServerTimeout(long timeout);
     void innerResponse(ConnectConnection* c, Request* req, Response* res);
     void infoRequest(Request* req, const String& key);
     void infoLatencyRequest(Request* req);
