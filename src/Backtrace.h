@@ -12,10 +12,10 @@
 #if _PREDIXY_BACKTRACE_
 
 #include <execinfo.h>
-inline void traceInfo()
+inline void traceInfo(int sig)
 {
 #define Size 128
-    logError("predixy backtrace");
+    logError("predixy backtrace(%d)", sig);
     void* buf[Size];
     int num = ::backtrace(buf, Size);
     int fd = -1;
@@ -32,9 +32,9 @@ inline void traceInfo()
 
 #else
 
-inline void traceInfo()
+inline void traceInfo(int sig)
 {
-    logError("predixy backtrace, but current system unspport backtrace");
+    logError("predixy backtrace(%d), but current system unspport backtrace", sig);
 }
 
 #endif

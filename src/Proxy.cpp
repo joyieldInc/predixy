@@ -27,7 +27,7 @@ static bool Stop = false;
 static void abortHandler(int sig)
 {
     if (!Abort) {
-        traceInfo();
+        traceInfo(sig);
     }
     Abort = true;
     if (!Running) {
@@ -65,6 +65,7 @@ Proxy::~Proxy()
 
 bool Proxy::init(int argc, char* argv[])
 {
+    signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
     signal(SIGFPE, abortHandler);
     signal(SIGILL, abortHandler);
@@ -72,7 +73,6 @@ bool Proxy::init(int argc, char* argv[])
     signal(SIGABRT, abortHandler);
     signal(SIGBUS, abortHandler);
     signal(SIGQUIT, abortHandler);
-    signal(SIGHUP, abortHandler);
     signal(SIGINT, stopHandler);
     signal(SIGTERM, stopHandler);
 
