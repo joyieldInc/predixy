@@ -5,12 +5,15 @@ cluster.conf
         MasterReadPriority 60
         StaticSlaveReadPriority 50
         DynamicSlaveReadPriority 50
-        RefreshInterval 1
-        ServerFailureLimit 10
-        ServerRetryTimeout 1
+        RefreshInterval 300ms
+        ServerTimeout 300ms                 #added in commit 86183a4
+        ServerFailureLimit 2
+        ServerRetryTimeout 500ms
+        KeepAlive 120s                      #added in commit 86183a4
         Servers {
             + 192.168.2.107:2211
-            + 192.168.2.107:2212
+            + 192.168.2.108:2212
+            + 192.168.2.109:2213
         }
     }
 
@@ -34,10 +37,16 @@ Some use cases you can see below:
 | 0/50  |  	all write requests, 0 read requests  | 50% read requests | 50% read requests | all slaves dead, all read requests fail |
 | 10/50  |  	all write requests, 0 read requests  | 50% read requests | 50% read requests | all slaves dead, read requests deliver to master |
 
-**RefreshInterval** - seconds, tells predixy how often it should poll nodes info and allocated hash slots in case of Cluster usage
+**RefreshInterval** - seconds, milliseconds or microseconds [s|ms|us], tells predixy how often it should poll nodes info and allocated hash slots in case of Cluster usage
 
 **ServerFailureLimit** - amount of failed queries to node when predixy stop forwarding queries to this node
 
-**ServerRetryTimeout** - seconds, tells predixy how often it should try to check health of failed nodes and decide if they still failed or alive and can be used for queries processing
+**ServerTimeout** - seconds, milliseconds or microseconds [s|ms|us], is timeout for nearly all commands except BRPOP, BLPOP, BRPOPLUSH, transactions and PUB/SUB. It's Redis server connection socket read/write timeout, to avoid wait for a Redis response too long. When timeout reached, Predixy will close connection between itself and Redis and throw an error.
+**Available from the commit 86183a4.**
+
+**KeepAlive** - seconds, applied to redis connection(socket), it works for all commands that not covered with the **ServerTimeout**, i.e. applied also to commands with blocking nature like BRPOP, BLPOP, BRPOPLPUSH. hen timeout reached, Predixy will close connection between itself and Redis and throw an error.
+**Available from the commit 86183a4.**
+
+**ServerRetryTimeout** - seconds, milliseconds or microseconds [s|ms|us], tells predixy how often it should try to check health of failed nodes and decide if they still failed or alive and can be used for queries processing
 
 **Servers** - just line-by-line list of static Redis nodes in socket fashion, like `+ IP:PORT`
