@@ -53,11 +53,10 @@ ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
         c->close(mHandler);
         return nullptr;
     }
-    if (mServ->fail() || c->isConnecting()) {
+    if (mServ->fail()) {
         return nullptr;
     }
     return c;
-    return mServ->fail() ? nullptr : c;
 }
 
 ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
