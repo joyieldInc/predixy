@@ -138,3 +138,4 @@ All rights reserved.
 
 License under BSD 3-clause "New" or "Revised" License
 
+微信:cppfan ![微信](https://github.com/joyieldInc/predixy/blob/master/doc/wechat-cppfan.jpeg)

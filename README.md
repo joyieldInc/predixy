@@ -131,3 +131,5 @@ Copyright (C) 2017 Joyield, Inc. <joyield.com#gmail.com>
 All rights reserved.
 
 License under BSD 3-clause "New" or "Revised" License
+
+WeChat:cppfan ![wechat](https://github.com/joyieldInc/predixy/blob/master/doc/wechat-cppfan.jpeg)
