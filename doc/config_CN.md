@@ -222,9 +222,11 @@ predixy支持Redis Sentinel和Redis Cluster来使用redis，一个配置里这�
         [MasterReadPriority [0-100]]
         [StaticSlaveReadPriority [0-100]]
         [DynamicSlaveReadPriority [0-100]]
-        [RefreshInterval seconds]
+        [RefreshInterval number[s|ms|us]]
+        [ServerTimeout number[s|ms|us]]
         [ServerFailureLimit number]
-        [ServerRetryTimeout seconds]
+        [ServerRetryTimeout number[s|ms|us]]
+        [KeepAlive seconds]
         Sentinels {
             + addr
             ...
@@ -242,12 +244,14 @@ predixy支持Redis Sentinel和Redis Cluster来使用redis，一个配置里这�
 + Hash: 指定对key算哈希的方法，当前只支持atol和crc16
 + HashTag: 指定哈希标签，不指定的话为{}
 + Distribution: 指定分布key的方法，当前只支持modula和random
-+ MasterReadPriority: 读写分离功能，从redis master节点执行读请求的优先级，为0则禁止读redis master
-+ StaticSlaveReadPriority: 读写分离功能，从静态redis slave节点执行读请求的优先级，所谓静态节点，是指在本配置文件中显示列出的redis节点
-+ DynamicSlaveReadPolicy: 功能见上，所谓动态节点是指在本配置文件中没有列出，但是通过redis sentinel动态发现的节点
-+ RefreshInterval: predixy会周期性的请求redis sentinel以获取最新的集群信息，该参数以秒为单位指定刷新周期
-+ ServerFailureLimit: 一个redis实例出现多少次才错误以后将其标记为失效
-+ ServerRetryTimeout: 一个redis实例失效后多久后去检查其是否恢复正常
++ MasterReadPriority: 读写分离功能，从redis master节点执行读请求的优先级，为0则禁止读redis master，不指定的话为50
++ StaticSlaveReadPriority: 读写分离功能，从静态redis slave节点执行读请求的优先级，所谓静态节点，是指在本配置文件中显示列出的redis节点，不指定的话为0
++ DynamicSlaveReadPolicy: 功能见上，所谓动态节点是指在本配置文件中没有列出，但是通过redis sentinel动态发现的节点，不指定的话为0
++ RefreshInterval: predixy会周期性的请求redis sentinel以获取最新的集群信息，该参数以秒为单位指定刷新周期，不指定的话为1秒
++ ServerTimeout: 请求在predixy中最长的处理/等待时间，如果超过该时间redis还没有响应的话，那么predixy会关闭同redis的连接，并给客户端一个错误响应，对于blpop这种阻塞式命令，该选项不起作用，为0则禁止此功能，即如果redis不返回就一直等待，不指定的话为0
++ ServerFailureLimit: 一个redis实例出现多少次才错误以后将其标记为失效，不指定的话为10
++ ServerRetryTimeout: 一个redis实例失效后多久后去检查其是否恢复正常，不指定的话为1秒
++ KeepAlive: predixy与redis的连接tcp keepalive时间，为0则禁止此功能，不指定的话为0
 + Sentinels: 里面定义redis sentinel实例的地址
 + Group: 定义一个redis组，Group的名字应该和redis sentinel里面的名字一致，Group里可以显示列出redis的地址，列出的话就是上面提到的静态节点
 
@@ -262,8 +266,10 @@ predixy支持Redis Sentinel和Redis Cluster来使用redis，一个配置里这�
         StaticSlaveReadPriority 50
         DynamicSlaveReadPriority 50
         RefreshInterval 1
+        ServerTimeout 1
         ServerFailureLimit 10
         ServerRetryTimeout 1
+        KeepAlive 120
         Sentinels {
             + 10.2.2.2:7500
             + 10.2.2.3:7500
@@ -287,8 +293,10 @@ predixy支持Redis Sentinel和Redis Cluster来使用redis，一个配置里这�
         [StaticSlaveReadPriority [0-100]]
         [DynamicSlaveReadPriority [0-100]]
         [RefreshInterval seconds]
+        [ServerTimeout number[s|ms|us]]
         [ServerFailureLimit number]
-        [ServerRetryTimeout seconds]
+        [ServerRetryTimeout number[s|ms|us]]
+        [KeepAlive seconds]
         Servers {
             + addr
             ...
@@ -308,8 +316,10 @@ predixy支持Redis Sentinel和Redis Cluster来使用redis，一个配置里这�
         StaticSlaveReadPriority 50
         DynamicSlaveReadPriority 50
         RefreshInterval 1
+        ServerTimeout 1
         ServerFailureLimit 10
         ServerRetryTimeout 1
+        KeepAlive 120
         Servers {
             + 192.168.2.107:2211
             + 192.168.2.107:2212

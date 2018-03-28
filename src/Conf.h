@@ -50,10 +50,10 @@ struct ServerPoolConf
     int staticSlaveReadPriority = 0;
     int dynamicSlaveReadPriority = 0;
     long refreshInterval = 1000000;    //us
-    long serverTimeout = 1000000; //us
+    long serverTimeout = 0; //us
     int serverFailureLimit = 10;
     long serverRetryTimeout = 1000000; //us
-    int keepalive = 120; //seconds
+    int keepalive = 0; //seconds
     int databases = 1;
 };
 
