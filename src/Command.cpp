@@ -10,7 +10,7 @@
 #include "String.h"
 #include "Command.h"
 
-const Command Command::CmdPool[Sentinel] = {
+Command Command::CmdPool[AvailableCommands] = {
     {None,              "",                 0,  MaxArgs,   Read},
     {Ping,              "ping",             1,  2,         Read},
     {PingServ,          "ping",             1,  2,         Inner},
@@ -171,11 +171,14 @@ const Command Command::CmdPool[Sentinel] = {
     {SubMsg,            "\000SubMsg",       0,  0,         Admin}
 };
 
+int Command::Sentinel = Command::MaxCommands;
 Command::CommandMap Command::CmdMap;
+
 void Command::init()
 {
     int type = 0;
-    for (auto& i : CmdPool) {
+    for (auto j = 0; j < MaxCommands; j++) {
+        const auto& i = CmdPool[j];
         if (i.type != type) {
             Throw(InitFail, "command %s unmatch the index in commands table", i.name);
         }
@@ -185,5 +188,14 @@ void Command::init()
         }
         CmdMap[i.name] = &i;
     }
+}
+
+void Command::addCustomCommand(const Command *p) {
+    if (nullptr != find(p->name)) {
+        Throw(InitFail, "custom command %s is duplicated", p->name); 
+    }
+    CmdPool[Sentinel] = *p;
+    CmdMap[p->name] = &CmdPool[Sentinel];
+    Sentinel++;
 }
 
