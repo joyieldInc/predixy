@@ -37,7 +37,7 @@ void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int ty
     c.name = name;
     c.cmd.type = (Command::Type)type;
     c.cmd.name = c.name.c_str();
-    c.cmd.minArgs = 1;
+    c.cmd.minArgs = 2;
     c.cmd.maxArgs = 1;
     c.cmd.mode = Command::Write;
 }
@@ -376,9 +376,6 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
        Throw(InvalidValue, "%s:%d CustomCommand require scope value", node->file, node->line);
     }
     for (auto p = node->sub; p; p = p->next) {
-       if (Command::Sentinel >= Command::AvailableCommands) {
-          Throw(InvalidValue, "%s:%d Too many custom commands", node->file, node->line);
-       }
        mCustomCommands.push_back(CustomCommandConf{});
        auto& cc = mCustomCommands.back();
        CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
@@ -388,9 +385,13 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
                   node->file, node->line);
        }
        for (;s ; s = s->next) {
-           setInt(cc.cmd.minArgs, "minArgs", s, 1);
-           setInt(cc.cmd.maxArgs, "maxArgs", s, 1, 9999);
-           setCommandMode(cc.cmd.mode, "mode", s);
+           if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
+           } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
+           } else if (setCommandMode(cc.cmd.mode, "mode", s)) {
+           } else {
+               Throw(UnknownKey, "%s:%d unknown key %s",
+                      s->file, s->line, s->key.c_str());
+           }
        }
        Command::addCustomCommand(&cc.cmd);
     }
@@ -413,16 +414,6 @@ bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n
                mode |= Command::Read;
             } else if ((strcasecmp(mask.c_str(), "Admin") == 0)) {
                mode |= Command::Admin;
-            } else if ((strcasecmp(mask.c_str(), "Private") == 0)) {
-               mode |= Command::Private;
-            } else if ((strcasecmp(mask.c_str(), "NoKey") == 0)) {
-               mode |= Command::NoKey;
-            } else if ((strcasecmp(mask.c_str(), "MultiKey") == 0)) {
-               mode |= Command::MultiKey;
-            } else if ((strcasecmp(mask.c_str(), "SMultiKey") == 0)) {
-               mode |= Command::SMultiKey;
-            } else if ((strcasecmp(mask.c_str(), "MultiKeyVal") == 0)) {
-               mode |= Command::MultiKeyVal;
             } else if ((strcasecmp(mask.c_str(), "KeyAt2") == 0)) {
                mode |= Command::KeyAt2;
             } else if ((strcasecmp(mask.c_str(), "KeyAt3") == 0)) {

@@ -191,6 +191,9 @@ void Command::init()
 }
 
 void Command::addCustomCommand(const Command *p) {
+    if (Sentinel >= AvailableCommands) {
+        Throw(InitFail, "too many custom commands(>%d)", MaxCustomCommands);
+    }
     if (nullptr != find(p->name)) {
         Throw(InitFail, "custom command %s is duplicated", p->name); 
     }
