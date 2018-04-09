@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include "LogFileSink.h"
 #include "ServerPool.h"
@@ -30,6 +31,15 @@ bool ServerConf::parse(ServerConf& s, const char* str)
     }
     s.addr.assign(str, p);
     return !s.addr.empty();
+}
+
+void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int type) {
+    c.name = name;
+    c.cmd.type = (Command::Type)type;
+    c.cmd.name = c.name.c_str();
+    c.cmd.minArgs = 2;
+    c.cmd.maxArgs = 2;
+    c.cmd.mode = Command::Write;
 }
 
 Conf::Conf():
@@ -157,6 +167,8 @@ void Conf::setGlobal(const ConfParser::Node* node)
             sentinelServerPool = p;
         } else if (strcasecmp(p->key.c_str(), "DataCenter") == 0) {
             dataCenter = p;
+        } else if (strcasecmp(p->key.c_str(), "CustomCommand") == 0) {
+            setCustomCommand(p);
         } else {
             Throw(UnknownKey, "%s:%d unknown key %s", p->file, p->line, p->key.c_str());
         }
@@ -356,6 +368,64 @@ void Conf::setDataCenter(const ConfParser::Node* node)
         dc.name = p->val;
         setDC(dc, p);
     }
+}
+
+void Conf::setCustomCommand(const ConfParser::Node* node)
+{
+    if (!node->sub) {
+       Throw(InvalidValue, "%s:%d CustomCommand require scope value", node->file, node->line);
+    }
+    for (auto p = node->sub; p; p = p->next) {
+       mCustomCommands.push_back(CustomCommandConf{});
+       auto& cc = mCustomCommands.back();
+       CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
+       auto s = p->sub;
+       if (!s) {
+           Throw(InvalidValue, "%s:%d CustomCommand.Command require scope value",
+                  node->file, node->line);
+       }
+       for (;s ; s = s->next) {
+           if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
+           } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
+           } else if (setCommandMode(cc.cmd.mode, "mode", s)) {
+           } else {
+               Throw(UnknownKey, "%s:%d unknown key %s",
+                      s->file, s->line, s->key.c_str());
+           }
+       }
+       Command::addCustomCommand(&cc.cmd);
+    }
+}
+
+bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n, const int defaultMode)
+{
+    if (strcasecmp(name, n->key.c_str()) == 0) {
+        if (n->val.size() == 0) {
+            mode = defaultMode;
+        } else {
+            mode = Command::Unknown;
+        }
+        std::string mask;
+        std::istringstream is(n->val);
+        while (std::getline(is, mask, ',')) {
+            if ((strcasecmp(mask.c_str(), "Write") == 0)) {
+               mode |= Command::Write;
+            } else if ((strcasecmp(mask.c_str(), "Read") == 0)) {
+               mode |= Command::Read;
+            } else if ((strcasecmp(mask.c_str(), "Admin") == 0)) {
+               mode |= Command::Admin;
+            } else if ((strcasecmp(mask.c_str(), "KeyAt2") == 0)) {
+               mode |= Command::KeyAt2;
+            } else if ((strcasecmp(mask.c_str(), "KeyAt3") == 0)) {
+               mode |= Command::KeyAt3;
+            } else {
+                Throw(InvalidValue, "%s:%d %s %s is not an mode",
+                    n->file, n->line, name, n->val.c_str());
+            }
+        }
+        return true;
+    }
+    return false;
 }
 
 void Conf::setDC(DCConf& dc, const ConfParser::Node* node)
