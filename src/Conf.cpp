@@ -38,8 +38,8 @@ void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int ty
     c.cmd.type = (Command::Type)type;
     c.cmd.name = c.name.c_str();
     c.cmd.minArgs = 2;
-    c.cmd.maxArgs = 1;
-    c.cmd.mode = Command::Write;
+    c.cmd.maxArgs = 2;
+    c.cmd.mode = Command::Write|Command::Read;
 }
 
 Conf::Conf():
