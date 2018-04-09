@@ -189,7 +189,9 @@ public:
         Unsubscribe,
         SubMsg,
 
-        Sentinel
+        MaxCommands,
+        MaxCustomCommands = 16,
+        AvailableCommands = MaxCommands + MaxCustomCommands,
     };
     enum Mode
     {
@@ -249,9 +251,11 @@ public:
         auto it = CmdMap.find(cmd);
         return it == CmdMap.end() ? nullptr : it->second;
     }
+    static void addCustomCommand(const Command *pc);
+    static int Sentinel;
 private:
     static const int MaxArgs = 100000000;
-    static const Command CmdPool[Sentinel];
+    static Command CmdPool[];
     class H
     {
     public:
