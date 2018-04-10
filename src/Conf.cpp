@@ -380,9 +380,6 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
         auto& cc = mCustomCommands.back();
         CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
         auto s = p->sub;
-        if (!s) {
-            Throw(InvalidValue, "%s:%d CustomCommand.Command require scope value", node->file, node->line);
-        }
         for (;s ; s = s->next) {
             if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
             } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
@@ -405,18 +402,14 @@ bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n
         mode = defaultMode;
     } else {
         mode = 0;
-        int used = 0;
         std::string mask;
         std::istringstream is(n->val);
-        while (std::getline(is, mask, ',')) {
+        while (std::getline(is, mask, '|')) {
             if ((strcasecmp(mask.c_str(), "Write") == 0)) {
-                used++;
                 mode |= Command::Write;
             } else if ((strcasecmp(mask.c_str(), "Read") == 0)) {
-                used++;
                 mode |= Command::Read;
             } else if ((strcasecmp(mask.c_str(), "Admin") == 0)) {
-                used++;
                 mode |= Command::Admin;
             } else if ((strcasecmp(mask.c_str(), "KeyAt2") == 0)) {
                 mode |= Command::KeyAt2;
@@ -426,10 +419,24 @@ bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n
                 Throw(InvalidValue, "%s:%d unknown mode %s", n->file, n->line, mask.c_str());
             }
         }
-        if (used == 0) {
-            Throw(InvalidValue, "%s:%d %s command require exclusive mode", n->file, n->line, name);
-        } else if (used > 1) {
-            Throw(InvalidValue, "%s:%d %s command duplicated exclusive mode", n->file, n->line, name);
+        switch (mode & Command::KeyMask) {
+        case 0:
+        case Command::KeyAt2:
+        case Command::KeyAt3:
+             break;
+        default:
+             Throw(InvalidValue, "%s:%d %s require exclusive key pos", n->file, n->line, name);
+        }
+        switch (mode & Command::AuthMask) {
+        case 0:
+            mode |= Command::Write;
+            break;
+        case Command::Read:
+        case Command::Write:
+        case Command::Admin:
+            break;
+        default:
+            Throw(InvalidValue, "%s:%d %s require exclusive mode", n->file, n->line, name);
         }
     }
     return true;
