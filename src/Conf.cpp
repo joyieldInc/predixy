@@ -373,59 +373,66 @@ void Conf::setDataCenter(const ConfParser::Node* node)
 void Conf::setCustomCommand(const ConfParser::Node* node)
 {
     if (!node->sub) {
-       Throw(InvalidValue, "%s:%d CustomCommand require scope value", node->file, node->line);
+        Throw(InvalidValue, "%s:%d CustomCommand require scope value", node->file, node->line);
     }
     for (auto p = node->sub; p; p = p->next) {
-       mCustomCommands.push_back(CustomCommandConf{});
-       auto& cc = mCustomCommands.back();
-       CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
-       auto s = p->sub;
-       if (!s) {
-           Throw(InvalidValue, "%s:%d CustomCommand.Command require scope value",
-                  node->file, node->line);
-       }
-       for (;s ; s = s->next) {
-           if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
-           } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
-           } else if (setCommandMode(cc.cmd.mode, "mode", s)) {
-           } else {
-               Throw(UnknownKey, "%s:%d unknown key %s",
-                      s->file, s->line, s->key.c_str());
-           }
-       }
-       Command::addCustomCommand(&cc.cmd);
+        mCustomCommands.push_back(CustomCommandConf{});
+        auto& cc = mCustomCommands.back();
+        CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
+        auto s = p->sub;
+        if (!s) {
+            Throw(InvalidValue, "%s:%d CustomCommand.Command require scope value", node->file, node->line);
+        }
+        for (;s ; s = s->next) {
+            if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
+            } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
+            } else if (setCommandMode(cc.cmd.mode, "mode", s)) {
+            } else {
+                Throw(UnknownKey, "%s:%d unknown key %s", s->file, s->line, s->key.c_str());
+            }
+        }
+        Command::addCustomCommand(&cc.cmd);
     }
 }
 
 bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n, const int defaultMode)
 {
-    if (strcasecmp(name, n->key.c_str()) == 0) {
-        if (n->val.size() == 0) {
-            mode = defaultMode;
-        } else {
-            mode = Command::Unknown;
-        }
+    if (strcasecmp(name, n->key.c_str()) != 0) {
+        return false;
+    }
+
+    if (n->val.size() == 0) {
+        mode = defaultMode;
+    } else {
+        mode = 0;
+        int used = 0;
         std::string mask;
         std::istringstream is(n->val);
         while (std::getline(is, mask, ',')) {
             if ((strcasecmp(mask.c_str(), "Write") == 0)) {
-               mode |= Command::Write;
+                used++;
+                mode |= Command::Write;
             } else if ((strcasecmp(mask.c_str(), "Read") == 0)) {
-               mode |= Command::Read;
+                used++;
+                mode |= Command::Read;
             } else if ((strcasecmp(mask.c_str(), "Admin") == 0)) {
-               mode |= Command::Admin;
+                used++;
+                mode |= Command::Admin;
             } else if ((strcasecmp(mask.c_str(), "KeyAt2") == 0)) {
-               mode |= Command::KeyAt2;
+                mode |= Command::KeyAt2;
             } else if ((strcasecmp(mask.c_str(), "KeyAt3") == 0)) {
-               mode |= Command::KeyAt3;
+                mode |= Command::KeyAt3;
             } else {
-                Throw(InvalidValue, "%s:%d %s %s is not an mode",
-                    n->file, n->line, name, n->val.c_str());
+                Throw(InvalidValue, "%s:%d unknown mode %s", n->file, n->line, mask.c_str());
             }
         }
-        return true;
+        if (used == 0) {
+            Throw(InvalidValue, "%s:%d %s command require exclusive mode", n->file, n->line, name);
+        } else if (used > 1) {
+            Throw(InvalidValue, "%s:%d %s command duplicated exclusive mode", n->file, n->line, name);
+        }
     }
-    return false;
+    return true;
 }
 
 void Conf::setDC(DCConf& dc, const ConfParser::Node* node)
