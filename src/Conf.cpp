@@ -381,12 +381,15 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
         CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
         auto s = p->sub;
         for (;s ; s = s->next) {
-            if (setInt(cc.cmd.minArgs, "minArgs", s, 2)) {
-            } else if (setInt(cc.cmd.maxArgs, "maxArgs", s, 2, 9999)) {
-            } else if (setCommandMode(cc.cmd.mode, "mode", s)) {
+            if (setInt(cc.cmd.minArgs, "MinArgs", s, 2)) {
+            } else if (setInt(cc.cmd.maxArgs, "MaxArgs", s, 2, 9999)) {
+            } else if (setCommandMode(cc.cmd.mode, "Mode", s)) {
             } else {
                 Throw(UnknownKey, "%s:%d unknown key %s", s->file, s->line, s->key.c_str());
             }
+        }
+        if (cc.cmd.maxArgs < cc.cmd.minArgs) {
+           Throw(InvalidValue, "%s:%d must be MaxArgs >= MinArgs", p->file, p->line);
         }
         Command::addCustomCommand(&cc.cmd);
     }
@@ -405,15 +408,15 @@ bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n
         std::string mask;
         std::istringstream is(n->val);
         while (std::getline(is, mask, '|')) {
-            if ((strcasecmp(mask.c_str(), "Write") == 0)) {
+            if ((strcasecmp(mask.c_str(), "write") == 0)) {
                 mode |= Command::Write;
-            } else if ((strcasecmp(mask.c_str(), "Read") == 0)) {
+            } else if ((strcasecmp(mask.c_str(), "read") == 0)) {
                 mode |= Command::Read;
-            } else if ((strcasecmp(mask.c_str(), "Admin") == 0)) {
+            } else if ((strcasecmp(mask.c_str(), "admin") == 0)) {
                 mode |= Command::Admin;
-            } else if ((strcasecmp(mask.c_str(), "KeyAt2") == 0)) {
+            } else if ((strcasecmp(mask.c_str(), "keyAt2") == 0)) {
                 mode |= Command::KeyAt2;
-            } else if ((strcasecmp(mask.c_str(), "KeyAt3") == 0)) {
+            } else if ((strcasecmp(mask.c_str(), "keyAt3") == 0)) {
                 mode |= Command::KeyAt3;
             } else {
                 Throw(InvalidValue, "%s:%d unknown mode %s", n->file, n->line, mask.c_str());
