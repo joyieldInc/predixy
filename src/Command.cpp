@@ -190,15 +190,15 @@ void Command::init()
     }
 }
 
-void Command::addCustomCommand(const Command *p) {
+void Command::addCustomCommand(const Command& c) {
     if (Sentinel >= AvailableCommands) {
         Throw(InitFail, "too many custom commands(>%d)", MaxCustomCommands);
     }
-    if (nullptr != find(p->name)) {
-        Throw(InitFail, "custom command %s is duplicated", p->name); 
+    if (nullptr != find(c.name)) {
+        Throw(InitFail, "custom command %s is duplicated", c.name); 
     }
-    CmdPool[Sentinel] = *p;
-    CmdMap[p->name] = &CmdPool[Sentinel];
+    CmdPool[Sentinel] = c;
+    CmdMap[c.name] = &CmdPool[Sentinel];
     Sentinel++;
 }
 

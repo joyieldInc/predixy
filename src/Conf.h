@@ -97,9 +97,13 @@ struct LatencyMonitorConf
 struct CustomCommandConf
 {
     std::string name;
-    Command cmd;
+    int type;
+    int minArgs;
+    int maxArgs;
+    int mode;
 
     static void init(CustomCommandConf &c, const char* name, const int type);
+    static void convert(const CustomCommandConf&c, Command &cmd);
 };
 
 class Conf

@@ -35,11 +35,18 @@ bool ServerConf::parse(ServerConf& s, const char* str)
 
 void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int type) {
     c.name = name;
-    c.cmd.type = (Command::Type)type;
-    c.cmd.name = c.name.c_str();
-    c.cmd.minArgs = 2;
-    c.cmd.maxArgs = 2;
-    c.cmd.mode = Command::Write;
+    c.type = type;
+    c.minArgs = 2;
+    c.maxArgs = 2;
+    c.mode = Command::Write;
+}
+
+void CustomCommandConf::convert(const CustomCommandConf&c, Command &cmd) {
+    cmd.name = c.name.c_str();
+    cmd.minArgs = c.minArgs;
+    cmd.maxArgs = c.maxArgs;
+    cmd.mode = c.mode;
+    cmd.type = (Command::Type)c.type;
 }
 
 Conf::Conf():
@@ -129,6 +136,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
     const ConfParser::Node* clusterServerPool = nullptr;
     const ConfParser::Node* sentinelServerPool = nullptr;
     const ConfParser::Node* dataCenter = nullptr;
+    const ConfParser::Node* latencyMonitor = nullptr;
     for (auto p = node; p; p = p->next) {
         if (setStr(mName, "Name", p)) {
         } else if (setStr(mBind, "Bind", p)) {
@@ -157,8 +165,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
         } else if (setInt(mLogSample[LogLevel::Warn], "LogWarnSample", p)) {
         } else if (setInt(mLogSample[LogLevel::Error], "LogErrorSample", p)) {
         } else if (strcasecmp(p->key.c_str(), "LatencyMonitor") == 0) {
-            mLatencyMonitors.push_back(LatencyMonitorConf{});
-            setLatencyMonitor(mLatencyMonitors.back(), p);
+            latencyMonitor = p;
         } else if (strcasecmp(p->key.c_str(), "Authority") == 0) {
             authority = p;
         } else if (strcasecmp(p->key.c_str(), "ClusterServerPool") == 0) {
@@ -189,6 +196,10 @@ void Conf::setGlobal(const ConfParser::Node* node)
     }
     if (dataCenter) {
         setDataCenter(dataCenter);
+    }
+    if (latencyMonitor) {
+        mLatencyMonitors.push_back(LatencyMonitorConf{});
+        setLatencyMonitor(mLatencyMonitors.back(), latencyMonitor);
     }
 }
 
@@ -381,17 +392,19 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
         CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
         auto s = p->sub;
         for (;s ; s = s->next) {
-            if (setInt(cc.cmd.minArgs, "MinArgs", s, 2)) {
-            } else if (setInt(cc.cmd.maxArgs, "MaxArgs", s, 2, 9999)) {
-            } else if (setCommandMode(cc.cmd.mode, "Mode", s)) {
+            if (setInt(cc.minArgs, "MinArgs", s, 2)) {
+            } else if (setInt(cc.maxArgs, "MaxArgs", s, 2, 9999)) {
+            } else if (setCommandMode(cc.mode, "Mode", s)) {
             } else {
                 Throw(UnknownKey, "%s:%d unknown key %s", s->file, s->line, s->key.c_str());
             }
         }
-        if (cc.cmd.maxArgs < cc.cmd.minArgs) {
+        if (cc.maxArgs < cc.minArgs) {
            Throw(InvalidValue, "%s:%d must be MaxArgs >= MinArgs", p->file, p->line);
         }
-        Command::addCustomCommand(&cc.cmd);
+        Command cmd;
+        CustomCommandConf::convert(cc, cmd);
+        Command::addCustomCommand(cmd);
     }
 }
 

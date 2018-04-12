@@ -251,7 +251,7 @@ public:
         auto it = CmdMap.find(cmd);
         return it == CmdMap.end() ? nullptr : it->second;
     }
-    static void addCustomCommand(const Command *pc);
+    static void addCustomCommand(const Command& pc);
     static int Sentinel;
 private:
     static const int MaxArgs = 100000000;
