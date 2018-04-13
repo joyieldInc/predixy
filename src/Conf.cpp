@@ -41,14 +41,6 @@ void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int ty
     c.mode = Command::Write;
 }
 
-void CustomCommandConf::convert(const CustomCommandConf&c, Command &cmd) {
-    cmd.name = strdup(c.name.c_str());
-    cmd.minArgs = c.minArgs;
-    cmd.maxArgs = c.maxArgs;
-    cmd.mode = c.mode;
-    cmd.type = (Command::Type)c.type;
-}
-
 Conf::Conf():
     mBind("0.0.0.0:7617"),
     mWorkerThreads(1),
@@ -197,7 +189,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
     if (dataCenter) {
         setDataCenter(dataCenter);
     }
-    for (auto latencyMonitor : latencyMonitors) {
+    for (auto& latencyMonitor : latencyMonitors) {
         mLatencyMonitors.push_back(LatencyMonitorConf{});
         setLatencyMonitor(mLatencyMonitors.back(), latencyMonitor);
     }
@@ -402,9 +394,9 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
         if (cc.maxArgs < cc.minArgs) {
            Throw(InvalidValue, "%s:%d must be MaxArgs >= MinArgs", p->file, p->line);
         }
-        Command cmd;
-        CustomCommandConf::convert(cc, cmd);
-        Command::addCustomCommand(cmd);
+    }
+    for (const auto& cc : mCustomCommands) {
+        Command::addCustomCommand(cc);
     }
 }
 

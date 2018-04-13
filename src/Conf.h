@@ -103,7 +103,6 @@ struct CustomCommandConf
     int mode;
 
     static void init(CustomCommandConf &c, const char* name, const int type);
-    static void convert(const CustomCommandConf&c, Command &cmd);
 };
 
 class Conf

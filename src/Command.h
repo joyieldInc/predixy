@@ -11,6 +11,8 @@
 #include "Exception.h"
 #include "HashFunc.h"
 
+struct CustomCommandConf;
+
 class Command
 {
 public:
@@ -251,7 +253,7 @@ public:
         auto it = CmdMap.find(cmd);
         return it == CmdMap.end() ? nullptr : it->second;
     }
-    static void addCustomCommand(const Command& pc);
+    static void addCustomCommand(const CustomCommandConf& pc);
     static int Sentinel;
 private:
     static const int MaxArgs = 100000000;
