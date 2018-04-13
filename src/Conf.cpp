@@ -33,9 +33,8 @@ bool ServerConf::parse(ServerConf& s, const char* str)
     return !s.addr.empty();
 }
 
-void CustomCommandConf::init(CustomCommandConf&c, const char* name, const int type) {
+void CustomCommandConf::init(CustomCommandConf&c, const char* name) {
     c.name = name;
-    c.type = type;
     c.minArgs = 2;
     c.maxArgs = 2;
     c.mode = Command::Write;
@@ -381,7 +380,7 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
     for (auto p = node->sub; p; p = p->next) {
         mCustomCommands.push_back(CustomCommandConf{});
         auto& cc = mCustomCommands.back();
-        CustomCommandConf::init(cc, p->key.c_str(), Command::Sentinel);
+        CustomCommandConf::init(cc, p->key.c_str());
         auto s = p->sub;
         for (;s ; s = s->next) {
             if (setInt(cc.minArgs, "MinArgs", s, 2)) {

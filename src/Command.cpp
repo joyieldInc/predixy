@@ -203,8 +203,7 @@ void Command::addCustomCommand(const CustomCommandConf& ccc) {
     p->minArgs = ccc.minArgs;
     p->maxArgs = ccc.maxArgs;
     p->mode = ccc.mode;
-    p->type = (Command::Type)ccc.type;
+    p->type = (Command::Type)Sentinel++;
     CmdMap[ccc.name] = p;
-    Sentinel++;
 }
 
