@@ -9,8 +9,9 @@
 #include <map>
 #include "String.h"
 #include "Command.h"
+#include "Conf.h"
 
-const Command Command::CmdPool[Sentinel] = {
+Command Command::CmdPool[AvailableCommands] = {
     {None,              "",                 0,  MaxArgs,   Read},
     {Ping,              "ping",             1,  2,         Read},
     {PingServ,          "ping",             1,  2,         Inner},
@@ -171,11 +172,14 @@ const Command Command::CmdPool[Sentinel] = {
     {SubMsg,            "\000SubMsg",       0,  0,         Admin}
 };
 
+int Command::Sentinel = Command::MaxCommands;
 Command::CommandMap Command::CmdMap;
+
 void Command::init()
 {
     int type = 0;
-    for (auto& i : CmdPool) {
+    for (auto j = 0; j < MaxCommands; j++) {
+        const auto& i = CmdPool[j];
         if (i.type != type) {
             Throw(InitFail, "command %s unmatch the index in commands table", i.name);
         }
@@ -185,5 +189,21 @@ void Command::init()
         }
         CmdMap[i.name] = &i;
     }
+}
+
+void Command::addCustomCommand(const CustomCommandConf& ccc) {
+    if (Sentinel >= AvailableCommands) {
+        Throw(InitFail, "too many custom commands(>%d)", MaxCustomCommands);
+    }
+    if (nullptr != find(ccc.name)) {
+        Throw(InitFail, "custom command %s is duplicated", ccc.name); 
+    }
+    auto* p = &CmdPool[Sentinel];
+    p->name = ccc.name.c_str();
+    p->minArgs = ccc.minArgs;
+    p->maxArgs = ccc.maxArgs;
+    p->mode = ccc.mode;
+    p->type = (Command::Type)Sentinel++;
+    CmdMap[ccc.name] = p;
 }
 

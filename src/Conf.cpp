@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include "LogFileSink.h"
 #include "ServerPool.h"
@@ -30,6 +31,13 @@ bool ServerConf::parse(ServerConf& s, const char* str)
     }
     s.addr.assign(str, p);
     return !s.addr.empty();
+}
+
+void CustomCommandConf::init(CustomCommandConf&c, const char* name) {
+    c.name = name;
+    c.minArgs = 2;
+    c.maxArgs = 2;
+    c.mode = Command::Write;
 }
 
 Conf::Conf():
@@ -119,6 +127,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
     const ConfParser::Node* clusterServerPool = nullptr;
     const ConfParser::Node* sentinelServerPool = nullptr;
     const ConfParser::Node* dataCenter = nullptr;
+    std::vector<const ConfParser::Node*> latencyMonitors;
     for (auto p = node; p; p = p->next) {
         if (setStr(mName, "Name", p)) {
         } else if (setStr(mBind, "Bind", p)) {
@@ -147,8 +156,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
         } else if (setInt(mLogSample[LogLevel::Warn], "LogWarnSample", p)) {
         } else if (setInt(mLogSample[LogLevel::Error], "LogErrorSample", p)) {
         } else if (strcasecmp(p->key.c_str(), "LatencyMonitor") == 0) {
-            mLatencyMonitors.push_back(LatencyMonitorConf{});
-            setLatencyMonitor(mLatencyMonitors.back(), p);
+            latencyMonitors.push_back(p);
         } else if (strcasecmp(p->key.c_str(), "Authority") == 0) {
             authority = p;
         } else if (strcasecmp(p->key.c_str(), "ClusterServerPool") == 0) {
@@ -157,6 +165,8 @@ void Conf::setGlobal(const ConfParser::Node* node)
             sentinelServerPool = p;
         } else if (strcasecmp(p->key.c_str(), "DataCenter") == 0) {
             dataCenter = p;
+        } else if (strcasecmp(p->key.c_str(), "CustomCommand") == 0) {
+            setCustomCommand(p);
         } else {
             Throw(UnknownKey, "%s:%d unknown key %s", p->file, p->line, p->key.c_str());
         }
@@ -177,6 +187,10 @@ void Conf::setGlobal(const ConfParser::Node* node)
     }
     if (dataCenter) {
         setDataCenter(dataCenter);
+    }
+    for (auto& latencyMonitor : latencyMonitors) {
+        mLatencyMonitors.push_back(LatencyMonitorConf{});
+        setLatencyMonitor(mLatencyMonitors.back(), latencyMonitor);
     }
 }
 
@@ -356,6 +370,83 @@ void Conf::setDataCenter(const ConfParser::Node* node)
         dc.name = p->val;
         setDC(dc, p);
     }
+}
+
+void Conf::setCustomCommand(const ConfParser::Node* node)
+{
+    if (!node->sub) {
+        Throw(InvalidValue, "%s:%d CustomCommand require scope value", node->file, node->line);
+    }
+    for (auto p = node->sub; p; p = p->next) {
+        mCustomCommands.push_back(CustomCommandConf{});
+        auto& cc = mCustomCommands.back();
+        CustomCommandConf::init(cc, p->key.c_str());
+        auto s = p->sub;
+        for (;s ; s = s->next) {
+            if (setInt(cc.minArgs, "MinArgs", s, 2)) {
+            } else if (setInt(cc.maxArgs, "MaxArgs", s, 2, 9999)) {
+            } else if (setCommandMode(cc.mode, "Mode", s)) {
+            } else {
+                Throw(UnknownKey, "%s:%d unknown key %s", s->file, s->line, s->key.c_str());
+            }
+        }
+        if (cc.maxArgs < cc.minArgs) {
+           Throw(InvalidValue, "%s:%d must be MaxArgs >= MinArgs", p->file, p->line);
+        }
+    }
+    for (const auto& cc : mCustomCommands) {
+        Command::addCustomCommand(cc);
+    }
+}
+
+bool Conf::setCommandMode(int& mode, const char* name, const ConfParser::Node* n, const int defaultMode)
+{
+    if (strcasecmp(name, n->key.c_str()) != 0) {
+        return false;
+    }
+
+    if (n->val.size() == 0) {
+        mode = defaultMode;
+    } else {
+        mode = 0;
+        std::string mask;
+        std::istringstream is(n->val);
+        while (std::getline(is, mask, '|')) {
+            if ((strcasecmp(mask.c_str(), "write") == 0)) {
+                mode |= Command::Write;
+            } else if ((strcasecmp(mask.c_str(), "read") == 0)) {
+                mode |= Command::Read;
+            } else if ((strcasecmp(mask.c_str(), "admin") == 0)) {
+                mode |= Command::Admin;
+            } else if ((strcasecmp(mask.c_str(), "keyAt2") == 0)) {
+                mode |= Command::KeyAt2;
+            } else if ((strcasecmp(mask.c_str(), "keyAt3") == 0)) {
+                mode |= Command::KeyAt3;
+            } else {
+                Throw(InvalidValue, "%s:%d unknown mode %s", n->file, n->line, mask.c_str());
+            }
+        }
+        switch (mode & Command::KeyMask) {
+        case 0:
+        case Command::KeyAt2:
+        case Command::KeyAt3:
+             break;
+        default:
+             Throw(InvalidValue, "%s:%d %s require exclusive key pos", n->file, n->line, name);
+        }
+        switch (mode & Command::AuthMask) {
+        case 0:
+            mode |= Command::Write;
+            break;
+        case Command::Read:
+        case Command::Write:
+        case Command::Admin:
+            break;
+        default:
+            Throw(InvalidValue, "%s:%d %s require exclusive mode", n->file, n->line, name);
+        }
+    }
+    return true;
 }
 
 void Conf::setDC(DCConf& dc, const ConfParser::Node* node)

@@ -98,7 +98,7 @@ public:
     Buffer* output(Buffer* buf) const;
 private:
     String mName;
-    const std::bitset<Command::Sentinel>* mCmds;
+    const std::bitset<Command::AvailableCommands>* mCmds;
     std::vector<TimeSpan> mTimeSpan;
     TimeSpan mLast;
 };

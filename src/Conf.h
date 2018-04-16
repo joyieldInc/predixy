@@ -19,6 +19,7 @@
 #include "Distribution.h"
 #include "ConfParser.h"
 #include "Auth.h"
+#include "Command.h"
 
 struct AuthConf
 {
@@ -89,8 +90,18 @@ struct DCConf
 struct LatencyMonitorConf
 {
     std::string name;
-    std::bitset<Command::Sentinel> cmds;
+    std::bitset<Command::AvailableCommands> cmds;
     std::vector<long> timeSpan;//us
+};
+
+struct CustomCommandConf
+{
+    std::string name;
+    int minArgs;
+    int maxArgs;
+    int mode;
+
+    static void init(CustomCommandConf &c, const char* name);
 };
 
 class Conf
@@ -201,6 +212,8 @@ private:
     void setDC(DCConf& dc, const ConfParser::Node* n);
     void setReadPolicy(ReadPolicyConf& c, const ConfParser::Node* n);
     void setLatencyMonitor(LatencyMonitorConf& m, const ConfParser::Node* n);
+    void setCustomCommand(const ConfParser::Node* n);
+    bool setCommandMode(int& mode, const char* name, const ConfParser::Node* n, const int defaultMode = Command::Write);
 private:
     std::string mName;
     std::string mBind;
@@ -220,6 +233,7 @@ private:
     std::vector<DCConf> mDCConfs;
     std::string mLocalDC;
     std::vector<LatencyMonitorConf> mLatencyMonitors;
+    std::vector<CustomCommandConf> mCustomCommands;
 };
 
 
