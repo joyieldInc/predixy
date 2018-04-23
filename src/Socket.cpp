@@ -162,6 +162,7 @@ bool Socket::setTcpKeepAlive(int interval)
     if (ret != 0) {
         return false;
     }
+#ifdef __linux__
     val = interval;
     ret = setsockopt(mFd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val));
     if (ret != 0) {
@@ -177,6 +178,9 @@ bool Socket::setTcpKeepAlive(int interval)
     if (ret != 0) {
         return false;
     }
+#else
+    ((void)interval); //Avoid unused var warning for non Linux systems
+#endif
     return true;
 }
 
