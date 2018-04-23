@@ -196,7 +196,7 @@ void Command::addCustomCommand(const CustomCommandConf& ccc) {
         Throw(InitFail, "too many custom commands(>%d)", MaxCustomCommands);
     }
     if (nullptr != find(ccc.name)) {
-        Throw(InitFail, "custom command %s is duplicated", ccc.name); 
+        Throw(InitFail, "custom command %s is duplicated", ccc.name.c_str()); 
     }
     auto* p = &CmdPool[Sentinel];
     p->name = ccc.name.c_str();
