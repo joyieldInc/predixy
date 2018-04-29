@@ -162,6 +162,9 @@ Server* ServerGroup::getReadServer(Handler* h, DC* localDC) const
             continue;
         }
         DC* dc = s->dc();
+        if (!dc) {
+            continue;
+        }
         int dcrp = localDC->getReadPriority(dc);
         if (dcrp <= 0) {
             continue;
@@ -221,7 +224,7 @@ Server* ServerGroup::getReadServer(Handler* h, DC* localDC) const
         dc = sdc[0];
         found = true;
     }
-    if (!found) {//dc maybe nullptr even we found
+    if (!found) {
         return nullptr;
     }
     Server* deadServs[Const::MaxServInGroup];
