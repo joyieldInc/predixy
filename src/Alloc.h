@@ -76,7 +76,7 @@ public:
         }
         UsedMemory += allocSize<T>();
         if (MaxMemory == 0 || UsedMemory <= MaxMemory) {
-            void* p = ::operator new(allocSize<T>());
+            void* p = ::operator new(allocSize<T>(), std::nothrow);
             if (p) {
                 try {
                     obj = new (p) T(args...);
@@ -145,7 +145,7 @@ public:
     {
         int n = --mCnt;
         if (n == 0) {
-            Alloc<T>::destroy(static_cast<T*>(this));
+            T::Allocator::destroy(static_cast<T*>(this));
         } else if (n < 0) {
             logError("unref object %p with cnt %d", this, n);
             abort();

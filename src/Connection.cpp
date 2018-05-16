@@ -27,7 +27,7 @@ BufferPtr Connection::getBuffer(Handler* h, bool allowNew)
         }
     }
     if (!mBuf || mBuf->full()) {
-        BufferPtr buf = Alloc<Buffer>::create();
+        BufferPtr buf = BufferAlloc::create();
         if (mBuf) {
             mBuf->concat(buf);
         }

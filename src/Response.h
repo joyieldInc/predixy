@@ -18,6 +18,7 @@ class Response :
 public:
     typedef Response Value;
     typedef ListNode<Response, SharePtr<Response>> ListNodeType;
+    typedef Alloc<Response, Const::ResponseAllocCacheSize> Allocator;
     enum GenericCode
     {
         Pong,
@@ -137,6 +138,6 @@ private:
 };
 
 typedef List<Response> ResponseList;
-typedef Alloc<Response, Const::ResponseAllocCacheSize> ResponseAlloc;
+typedef Response::Allocator ResponseAlloc;
 
 #endif

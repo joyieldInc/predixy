@@ -32,8 +32,8 @@ namespace Const
     static const int MaxCmdLen = 32;
     static const int MaxKeyLen = 512;
     static const int BufferAllocCacheSize = 64;
-    static const int RequestAllocCacheSize = 32;
-    static const int ResponseAllocCacheSize = 32;
+    static const int RequestAllocCacheSize = 128;
+    static const int ResponseAllocCacheSize = 128;
     static const int AcceptConnectionAllocCacheSize = 32;
     static const int ConnectConnectionAllocCacheSize = 4;
 };

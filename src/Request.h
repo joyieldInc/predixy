@@ -25,6 +25,7 @@ class Request :
 public:
     typedef Request Value;
     typedef ListNode<Request, SharePtr<Request>, RequestListIndex::Size> ListNodeType;
+    typedef Alloc<Request, Const::RequestAllocCacheSize> Allocator;
     static const int MaxRedirectLimit = 3;
     enum GenericCode
     {
@@ -119,11 +120,11 @@ public:
     }
     Request* leader() const
     {
-        return mLeader;
+        return isLeader() ? const_cast<Request*>(this) : (Request*)mLeader;
     }
     bool isLeader() const
     {
-        return mLeader == this;
+        return mFollowers > 0;
     }
     bool isDelivered() const
     {
@@ -181,6 +182,6 @@ private:
 
 typedef List<Request, RequestListIndex::Recv> RecvRequestList;
 typedef List<Request, RequestListIndex::Send> SendRequestList;
-typedef Alloc<Request, Const::RequestAllocCacheSize> RequestAlloc;
+typedef Request::Allocator RequestAlloc;
 
 #endif

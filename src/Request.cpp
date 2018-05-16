@@ -98,6 +98,7 @@ Request::Request(GenericCode code):
 
 Request::~Request()
 {
+    clear();
 }
 
 void Request::clear()
@@ -155,13 +156,14 @@ void Request::set(const RequestParser& p, Request* leader)
         }
         mHead = r->mReq;
         mReq = p.request();
-        mLeader = leader;
         if (leader == this) {
             if (mType == Command::Mset || mType == Command::Msetnx) {
                 mFollowers = (p.argNum() - 1) >> 1;
             } else {
                 mFollowers = p.argNum() - 1;
             }
+        } else {
+            mLeader = leader;
         }
     } else {
         mReq = p.request();
@@ -338,49 +340,49 @@ int Request::fill(IOVec* vecs, int len)
 void Request::setResponse(Response* res)
 {
     mDone = true;
-    if (mLeader) {
-        mLeader->mFollowersDone += 1;
+    if (Request* ld = leader()) {
+        ld->mFollowersDone += 1;
         switch (mType) {
         case Command::Mget:
             mRes = res;
             break;
         case Command::Mset:
-            if (Response* leaderRes = mLeader->getResponse()) {
+            if (Response* leaderRes = ld->getResponse()) {
                 if (res->isError() && !leaderRes->isError()) {
-                    mLeader->mRes = res;
+                    ld->mRes = res;
                 }
             } else {
-                mLeader->mRes = res;
+                ld->mRes = res;
             }
             break;
         case Command::Msetnx:
-            if (Response* leaderRes = mLeader->getResponse()) {
+            if (Response* leaderRes = ld->getResponse()) {
                 if (!leaderRes->isError() &&
                      (res->isError() || res->integer() == 0)) {
-                    mLeader->mRes = res;
+                    ld->mRes = res;
                 }
             } else {
-                mLeader->mRes = res;
+                ld->mRes = res;
             }
             break;
         case Command::Touch:
         case Command::Exists:
         case Command::Del:
         case Command::Unlink:
-            if (!mLeader->mRes) {
-                mLeader->mRes = res;
+            if (!ld->mRes) {
+                ld->mRes = res;
             }
-            if (mLeader->isDone()) {
-                mLeader->mRes->set(mLeader->mRes->integer());
+            if (ld->isDone()) {
+                ld->mRes->set(ld->mRes->integer());
             }
             break;
         case Command::ScriptLoad:
-            if (Response* leaderRes = mLeader->getResponse()) {
+            if (Response* leaderRes = ld->getResponse()) {
                 if (leaderRes->isString() && !res->isString()) {
-                    mLeader->mRes = res;
+                    ld->mRes = res;
                 }
             } else {
-                mLeader->mRes = res;
+                ld->mRes = res;
             }
             break;
         default:
@@ -395,7 +397,7 @@ void Request::setResponse(Response* res)
 
 bool Request::isDone() const
 {
-    if (mLeader == this) {
+    if (isLeader()) {
         switch (mType) {
         case Command::Mget:
         case Command::Psubscribe:

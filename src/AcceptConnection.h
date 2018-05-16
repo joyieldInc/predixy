@@ -29,6 +29,7 @@ public:
     typedef AcceptConnection Value;
     typedef ListNode<AcceptConnection, SharePtr<AcceptConnection>> ListNodeType;
     typedef DequeNode<AcceptConnection, SharePtr<AcceptConnection>> DequeNodeType;
+    typedef Alloc<AcceptConnection, Const::AcceptConnectionAllocCacheSize> Allocator;
 public:
     AcceptConnection(int fd, sockaddr* addr, socklen_t len);
     ~AcceptConnection();
@@ -97,6 +98,6 @@ private:
 
 typedef List<AcceptConnection> AcceptConnectionList;
 typedef Deque<AcceptConnection> AcceptConnectionDeque;
-typedef Alloc<AcceptConnection, Const::AcceptConnectionAllocCacheSize> AcceptConnectionAlloc;
+typedef AcceptConnection::Allocator AcceptConnectionAlloc;
 
 #endif

@@ -23,6 +23,7 @@ public:
     typedef ConnectConnection Value;
     typedef ListNode<ConnectConnection> ListNodeType;
     typedef DequeNode<ConnectConnection> DequeNodeType;
+    typedef Alloc<ConnectConnection, Const::ConnectConnectionAllocCacheSize> Allocator;
 public:
     ConnectConnection(Server* s, bool shared);
     ~ConnectConnection();
@@ -97,6 +98,6 @@ private:
 
 typedef List<ConnectConnection> ConnectConnectionList;
 typedef Deque<ConnectConnection> ConnectConnectionDeque;
-typedef Alloc<ConnectConnection, Const::ConnectConnectionAllocCacheSize> ConnectConnectionAlloc;
+typedef ConnectConnection::Allocator ConnectConnectionAlloc;
 
 #endif
