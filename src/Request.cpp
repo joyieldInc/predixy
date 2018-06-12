@@ -289,7 +289,7 @@ void Request::adjustScanCursor(long cursor)
 
 void Request::follow(Request* leader)
 {
-    ++mFollowers;
+    leader->mFollowers += 1;
     if (leader == this) {
         return;
     }

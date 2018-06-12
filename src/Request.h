@@ -71,7 +71,7 @@ public:
     bool isDone() const;
     AcceptConnection* connection() const
     {
-        return mConn;
+        return mLeader ? mLeader->mConn : mConn;
     }
     void detach()
     {
