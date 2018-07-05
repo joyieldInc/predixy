@@ -109,7 +109,7 @@ void Socket::getFirstAddr(const char* addr, int type, int protocol, sockaddr* re
             port++;
         }
 
-        logDebug("Connecting to %s %d", host, port);
+        logDebug("Connecting to %s", addr);
 
         struct addrinfo hints;
         struct addrinfo *dst;
