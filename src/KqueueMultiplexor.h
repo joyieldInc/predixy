@@ -67,6 +67,5 @@ int KqueueMultiplexor::wait(long usec, T* handler)
 
 
 typedef KqueueMultiplexor Multiplexor;
-#define _MULTIPLEXOR_ASYNC_ASSIGN_
 
 #endif

@@ -31,12 +31,9 @@ bool EpollMultiplexor::addSocket(Socket* s, int evts)
     event.events |= (evts & ReadEvent) ? EPOLLIN : 0;
     event.events |= (evts & WriteEvent) ? EPOLLOUT : 0;
     event.events |= EPOLLET;
-    //event.events |= EPOLLONESHOT;
     event.data.ptr = s;
+    s->setEvent(evts);
     int ret = epoll_ctl(mFd, EPOLL_CTL_ADD, s->fd(), &event);
-    if (ret == 0) {
-        s->setEvent(evts);
-    }
     return ret == 0;
 }
 
@@ -61,7 +58,6 @@ bool EpollMultiplexor::addEvent(Socket* s, int evts)
     }
     if ((s->getEvent() | evts) != s->getEvent()) {
         event.events |= EPOLLET;
-        //event.events |= EPOLLONESHOT;
         int ret = epoll_ctl(mFd, EPOLL_CTL_MOD, s->fd(), &event);
         if (ret == 0) {
             s->setEvent(s->getEvent() | evts);
