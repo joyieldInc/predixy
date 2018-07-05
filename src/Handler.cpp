@@ -315,7 +315,6 @@ void Handler::addAcceptSocket(int fd, sockaddr* addr, socklen_t len)
     AcceptConnection* c = nullptr;
     try {
         c = AcceptConnectionAlloc::create(fd, addr, len);
-        logNotice("h %d accept c %s %d", id(), c->peer(), fd);
     } catch (ExceptionBase& e) {
         logWarn("h %d create connection for client %d fail %s",
                 id(), fd, e.what());
@@ -368,6 +367,8 @@ void Handler::addAcceptSocket(int fd, sockaddr* addr, socklen_t len)
         logWarn("h %d destroy c %s %d with add to event loop fail:%s",
                 id(), c->peer(), c->fd(), StrError());
         AcceptConnectionAlloc::destroy(c);
+    } else {
+        logNotice("h %d accept c %s %d assign to h %d", id(), c->peer(), fd, dst->id());
     }
 }
 

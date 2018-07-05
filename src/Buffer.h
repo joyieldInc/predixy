@@ -23,6 +23,7 @@ class Buffer :
     public RefCntObj<Buffer>
 {
 public:
+    typedef Alloc<Buffer, Const::BufferAllocCacheSize> Allocator;
     static const int MaxBufFmtAppendLen = 8192;
 public:
     Buffer& operator=(const Buffer&);
@@ -92,12 +93,13 @@ private:
 };
 
 typedef List<Buffer> BufferList;
+typedef Buffer::Allocator BufferAlloc;
+
 template<>
 inline int allocSize<Buffer>()
 {
     return Buffer::getSize() + sizeof(Buffer);
 }
-typedef Alloc<Buffer, Const::BufferAllocCacheSize> BufferAlloc;
 
 struct BufferPos
 {
