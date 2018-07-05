@@ -102,12 +102,15 @@ void Socket::getFirstAddr(const char* addr, int type, int protocol, sockaddr* re
     } else {
         std::string tmp;
         const char* host = addr;
-        const char* port = strchr(addr, ':');
+        const char* port = strrchr(addr, ':');
         if (port) {
             tmp.append(addr, port - addr);
             host = tmp.c_str();
             port++;
         }
+
+        logDebug("Connecting to %s", addr);
+
         struct addrinfo hints;
         struct addrinfo *dst;
         memset(&hints, 0, sizeof(hints));
