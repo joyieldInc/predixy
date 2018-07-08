@@ -118,10 +118,10 @@ bool Proxy::init(int argc, char* argv[])
             mServPool = p;
         }
         break;
-    case ServerPool::Sentinel:
+    case ServerPool::Standalone:
         {
-            SentinelServerPool* p = new SentinelServerPool(this);
-            p->init(mConf->sentinelServerPool());
+            StandaloneServerPool* p = new StandaloneServerPool(this);
+            p->init(mConf->standaloneServerPool());
             mServPool = p;
         }
         break;

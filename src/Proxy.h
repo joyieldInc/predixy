@@ -13,7 +13,7 @@
 #include "DC.h"
 #include "ServerPool.h"
 #include "ClusterServerPool.h"
-#include "SentinelServerPool.h"
+#include "StandaloneServerPool.h"
 #include "LatencyMonitor.h"
 
 class Proxy
@@ -51,15 +51,15 @@ public:
     }
     bool isSplitMultiKey() const
     {
-        return mConf->sentinelServerPool().groups.size() != 1;
+        return mConf->standaloneServerPool().groups.size() != 1;
     }
     bool supportTransaction() const
     {
-        return mConf->sentinelServerPool().groups.size() == 1;
+        return mConf->standaloneServerPool().groups.size() == 1;
     }
     bool supportSubscribe() const
     {
-        return mConf->sentinelServerPool().groups.size() == 1 ||
+        return mConf->standaloneServerPool().groups.size() == 1 ||
                mConf->clusterServerPool().servers.size() > 0;
     }
     const std::vector<Handler*>& handlers() const

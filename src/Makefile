@@ -72,6 +72,7 @@ objs = \
 	 Buffer.o \
 	 Command.o \
 	 Distribution.o \
+	 Enums.o \
 	 Reply.o \
 	 ConfParser.o \
 	 Conf.o \
@@ -87,7 +88,7 @@ objs = \
 	 ServerPool.o \
 	 ClusterNodesParser.o \
 	 ClusterServerPool.o \
-	 SentinelServerPool.o \
+	 StandaloneServerPool.o \
 	 ConnectConnectionPool.o \
 	 Handler.o \
 	 Proxy.o \

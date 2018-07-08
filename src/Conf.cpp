@@ -125,7 +125,7 @@ void Conf::setGlobal(const ConfParser::Node* node)
 {
     const ConfParser::Node* authority = nullptr;
     const ConfParser::Node* clusterServerPool = nullptr;
-    const ConfParser::Node* sentinelServerPool = nullptr;
+    const ConfParser::Node* standaloneServerPool = nullptr;
     const ConfParser::Node* dataCenter = nullptr;
     std::vector<const ConfParser::Node*> latencyMonitors;
     for (auto p = node; p; p = p->next) {
@@ -162,7 +162,9 @@ void Conf::setGlobal(const ConfParser::Node* node)
         } else if (strcasecmp(p->key.c_str(), "ClusterServerPool") == 0) {
             clusterServerPool = p;
         } else if (strcasecmp(p->key.c_str(), "SentinelServerPool") == 0) {
-            sentinelServerPool = p;
+            standaloneServerPool = p;
+        } else if (strcasecmp(p->key.c_str(), "StandaloneServerPool") == 0) {
+            standaloneServerPool = p;
         } else if (strcasecmp(p->key.c_str(), "DataCenter") == 0) {
             dataCenter = p;
         } else if (strcasecmp(p->key.c_str(), "CustomCommand") == 0) {
@@ -174,14 +176,17 @@ void Conf::setGlobal(const ConfParser::Node* node)
     if (authority) {
         setAuthority(authority);
     }
-    if (clusterServerPool && sentinelServerPool) {
-        Throw(LogicError, "Can't define ClusterServerPool and SentinelServerPool at the same time");
+    if (clusterServerPool && standaloneServerPool) {
+        Throw(LogicError, "Can't define ClusterServerPool/StandaloneServerPool at the same time");
     } else if (clusterServerPool) {
         setClusterServerPool(clusterServerPool);
         mServerPoolType = ServerPool::Cluster;
-    } else if (sentinelServerPool) {
-        setSentinelServerPool(sentinelServerPool);
-        mServerPoolType = ServerPool::Sentinel;
+    } else if (standaloneServerPool) {
+        if (strcasecmp(standaloneServerPool->key.c_str(), "SentinelServerPool") == 0) {
+            mStandaloneServerPool.refreshMethod = ServerPoolRefreshMethod::Sentinel;
+        }
+        setStandaloneServerPool(standaloneServerPool);
+        mServerPoolType = ServerPool::Standalone;
     } else {
         Throw(LogicError, "Must define a server pool");
     }
@@ -253,28 +258,21 @@ void Conf::setAuthority(const ConfParser::Node* node)
 
 bool Conf::setServerPool(ServerPoolConf& sp, const ConfParser::Node* p)
 {
+    bool ret = true;
     if (setStr(sp.password, "Password", p)) {
-        return true;
     } else if (setInt(sp.masterReadPriority, "MasterReadPriority", p, 0, 100)) {
-        return true;
     } else if (setInt(sp.staticSlaveReadPriority, "StaticSlaveReadPriority", p, 0, 100)) {
-        return true;
     } else if (setInt(sp.dynamicSlaveReadPriority, "DynamicSlaveReadPriority", p, 0, 100)) {
-        return true;
     } else if (setDuration(sp.refreshInterval, "RefreshInterval", p)) {
-        return true;
     } else if (setDuration(sp.serverTimeout, "ServerTimeout", p)) {
-        return true;
     } else if (setInt(sp.serverFailureLimit, "ServerFailureLimit", p, 1)) {
-        return true;
     } else if (setDuration(sp.serverRetryTimeout, "ServerRetryTimeout", p)) {
-        return true;
     } else if (setInt(sp.keepalive, "KeepAlive", p, 0)) {
-        return true;
     } else if (setInt(sp.databases, "Databases", p, 1, 128)) {
-        return true;
+    } else {
+        ret = false;
     }
-    return false;
+    return ret;
 }
 
 void Conf::setClusterServerPool(const ConfParser::Node* node)
@@ -298,41 +296,47 @@ void Conf::setClusterServerPool(const ConfParser::Node* node)
     }
 }
 
-void Conf::setSentinelServerPool(const ConfParser::Node* node)
+void Conf::setStandaloneServerPool(const ConfParser::Node* node)
 {
     if (!node->sub) {
-        Throw(InvalidValue, "%s:%d SentinelServerPool require scope value", node->file, node->line);
+        Throw(InvalidValue, "%s:%d StandaloneServerPool require scope value", node->file, node->line);
     }
-    mSentinelServerPool.hashTag[0] = '\0';
-    mSentinelServerPool.hashTag[1] = '\0';
+    mStandaloneServerPool.hashTag[0] = '\0';
+    mStandaloneServerPool.hashTag[1] = '\0';
     for (auto p = node->sub; p; p = p->next) {
-        if (setServerPool(mSentinelServerPool, p)) {
+        if (setServerPool(mStandaloneServerPool, p)) {
+        } else if (strcasecmp(p->key.c_str(), "RefreshMethod") == 0) {
+            try {
+                mStandaloneServerPool.refreshMethod = ServerPoolRefreshMethod::parse(p->val.c_str());
+            } catch (ServerPoolRefreshMethod::InvalidEnumValue& excp) {
+                Throw(InvalidValue, "%s:%d unknown RefreshMethod:%s", p->file, p->line, p->val.c_str());
+            }
         } else if (strcasecmp(p->key.c_str(), "Distribution") == 0) {
-            mSentinelServerPool.dist = Distribution::parse(p->val.c_str());
-            if (mSentinelServerPool.dist == Distribution::None) {
+            mStandaloneServerPool.dist = Distribution::parse(p->val.c_str());
+            if (mStandaloneServerPool.dist == Distribution::None) {
                 Throw(InvalidValue, "%s:%d unknown Distribution", p->file, p->line);
             }
         } else if (strcasecmp(p->key.c_str(), "Hash") == 0) {
-            mSentinelServerPool.hash = Hash::parse(p->val.c_str());
-            if (mSentinelServerPool.hash == Hash::None) {
+            mStandaloneServerPool.hash = Hash::parse(p->val.c_str());
+            if (mStandaloneServerPool.hash == Hash::None) {
                 Throw(InvalidValue, "%s:%d unknown Hash", p->file, p->line);
             }
         } else if (strcasecmp(p->key.c_str(), "HashTag") == 0) {
             if (p->val.empty()) {
-                mSentinelServerPool.hashTag[0] = '\0';
-                mSentinelServerPool.hashTag[1] = '\0';
+                mStandaloneServerPool.hashTag[0] = '\0';
+                mStandaloneServerPool.hashTag[1] = '\0';
             } else if (p->val.size() == 2) {
-                mSentinelServerPool.hashTag[0] = p->val[0];
-                mSentinelServerPool.hashTag[1] = p->val[1];
+                mStandaloneServerPool.hashTag[0] = p->val[0];
+                mStandaloneServerPool.hashTag[1] = p->val[1];
             } else {
                 Throw(InvalidValue, "%s:%d HashTag invalid", p->file, p->line);
             }
-        } else if (setServers(mSentinelServerPool.sentinels, "Sentinels", p)) {
-            mSentinelServerPool.sentinelPassword = p->val;
+        } else if (setServers(mStandaloneServerPool.sentinels, "Sentinels", p)) {
+            mStandaloneServerPool.sentinelPassword = p->val;
         } else if (strcasecmp(p->key.c_str(), "Group") == 0) {
-            mSentinelServerPool.groups.push_back(ServerGroupConf{p->val});
+            mStandaloneServerPool.groups.push_back(ServerGroupConf{p->val});
             if (p->sub) {
-                auto& g = mSentinelServerPool.groups.back();
+                auto& g = mStandaloneServerPool.groups.back();
                 setServers(g.servers, "Group", p);
             }
         } else {
@@ -340,18 +344,31 @@ void Conf::setSentinelServerPool(const ConfParser::Node* node)
                     p->file, p->line, p->key.c_str());
         }
     }
-    if (mSentinelServerPool.sentinels.empty()) {
-        Throw(LogicError, "SentinelServerPool no sentinel server");
+    if (mStandaloneServerPool.groups.empty()) {
+        Throw(LogicError, "StandaloneServerPool no server group");
     }
-    if (mSentinelServerPool.groups.empty()) {
-        Throw(LogicError, "SentinelServerPool no server group");
-    }
-    if (mSentinelServerPool.groups.size() > 1) {
-        if (mSentinelServerPool.dist == Distribution::None) {
-            Throw(LogicError, "SentinelServerPool must define Dsitribution in multi groups");
+    if (mStandaloneServerPool.refreshMethod == ServerPoolRefreshMethod::None) {
+        Throw(LogicError, "StandaloneServerPool must define RefreshMethod");
+    } else if (mStandaloneServerPool.refreshMethod == ServerPoolRefreshMethod::Sentinel) {
+        if (mStandaloneServerPool.sentinels.empty()) {
+            Throw(LogicError, "StandaloneServerPool with RefreshMethod(sentinel) but no sentinel servers");
         }
-        if (mSentinelServerPool.hash == Hash::None) {
-            Throw(LogicError, "SentinelServerPool must define Hash in multi groups");
+    } else {
+        if (!mStandaloneServerPool.sentinels.empty()) {
+            Throw(LogicError, "StandaloneServerPool with Sentinels but RefreshMethod is not sentinel");
+        }
+        for (auto& g : mStandaloneServerPool.groups) {
+            if (g.servers.empty()) {
+                Throw(LogicError, "Group(%s) must add servers", g.name.c_str());
+            }
+        }
+    }
+    if (mStandaloneServerPool.groups.size() > 1) {
+        if (mStandaloneServerPool.dist == Distribution::None) {
+            Throw(LogicError, "StandaloneServerPool must define Dsitribution in multi groups");
+        }
+        if (mStandaloneServerPool.hash == Hash::None) {
+            Throw(LogicError, "StandaloneServerPool must define Hash in multi groups");
         }
     }
 }
