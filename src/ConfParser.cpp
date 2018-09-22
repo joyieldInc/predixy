@@ -283,20 +283,22 @@ Done:
     case SValBody:
         return KeyVal;
     case VValBody:
+    {
+        auto ret = KeyVal;
         val.assign(line, pos, line.size() - pos);
         if (val.back() == '{') {
             val.resize(val.size() - 1);
-            int vsp = 0;
-            for (auto it = val.rbegin(); it != val.rend(); ++it) {
-                if (isspace(*it)) {
-                    ++vsp;
-                }
-            }
-            val.resize(val.size() - vsp);
-            return BeginScope;
-        } else {
-            return KeyVal;
+            ret = BeginScope;
         }
+        int vsp = 0;
+        for (auto it = val.rbegin(); it != val.rend(); ++it) {
+            if (isspace(*it)) {
+                ++vsp;
+            }
+        }
+        val.resize(val.size() - vsp);
+        return ret;
+    }
     case ScopeReady:
         return KeyVal;
     case ScopeBody:

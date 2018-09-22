@@ -20,6 +20,7 @@
 #include "ConfParser.h"
 #include "Auth.h"
 #include "Command.h"
+#include "Enums.h"
 
 struct AuthConf
 {
@@ -63,8 +64,9 @@ struct ClusterServerPoolConf : public ServerPoolConf
     std::vector<ServerConf> servers;
 };
 
-struct SentinelServerPoolConf : public ServerPoolConf
+struct StandaloneServerPoolConf : public ServerPoolConf
 {
+    ServerPoolRefreshMethod refreshMethod = ServerPoolRefreshMethod::None;
     Distribution dist = Distribution::None;
     Hash hash = Hash::None;
     char hashTag[2];
@@ -175,9 +177,9 @@ public:
     {
         return mClusterServerPool;
     }
-    const SentinelServerPoolConf& sentinelServerPool() const
+    const StandaloneServerPoolConf& standaloneServerPool() const
     {
-        return mSentinelServerPool;
+        return mStandaloneServerPool;
     }
     const std::string& localDC() const
     {
@@ -198,7 +200,7 @@ private:
     void setGlobal(const ConfParser::Node* node);
     void setAuthority(const ConfParser::Node* node);
     void setClusterServerPool(const ConfParser::Node* node);
-    void setSentinelServerPool(const ConfParser::Node* node);
+    void setStandaloneServerPool(const ConfParser::Node* node);
     void setDataCenter(const ConfParser::Node* node);
     void check();
     bool setServerPool(ServerPoolConf& sp, const ConfParser::Node* n);
@@ -229,7 +231,7 @@ private:
     std::vector<AuthConf> mAuthConfs;
     int mServerPoolType;
     ClusterServerPoolConf mClusterServerPool;
-    SentinelServerPoolConf mSentinelServerPool;
+    StandaloneServerPoolConf mStandaloneServerPool;
     std::vector<DCConf> mDCConfs;
     std::string mLocalDC;
     std::vector<LatencyMonitorConf> mLatencyMonitors;
