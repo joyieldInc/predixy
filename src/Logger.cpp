@@ -188,7 +188,10 @@ LogUnit* Logger::getLogUnit()
         }
     } else {
         std::unique_lock<std::mutex> lck(mMtx);
-        while (!mStop) {
+        while (true) {
+            if (!mStop) {
+                return nullptr;
+            }
             if (!mFree.empty()) {
                 log = mFree.back();
                 mFree.resize(mFree.size() - 1);
