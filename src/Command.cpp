@@ -97,7 +97,7 @@ Command Command::CmdPool[AvailableCommands] = {
     {Hmget,             "hmget",            3,  MaxArgs,   Read},
     {Hmset,             "hmset",            4,  MaxArgs,   Write},
     {Hscan,             "hscan",            3,  7,         Read},
-    {Hset,              "hset",             4,  4,         Write},
+    {Hset,              "hset",             4,  MaxArgs,   Write},
     {Hsetnx,            "hsetnx",           4,  4,         Write},
     {Hstrlen,           "hstrlen",          3,  3,         Read},
     {Hvals,             "hvals",            2,  2,         Read},
