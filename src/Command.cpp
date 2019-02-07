@@ -139,6 +139,8 @@ Command Command::CmdPool[AvailableCommands] = {
     {Zincrby,           "zincrby",          4,  4,         Write},
     {Zinterstore,       "zinterstore",      4,  MaxArgs,   Write},
     {Zlexcount,         "zlexcount",        4,  4,         Read},
+    {Zpopmax,           "zpopmax",          2,  3,         Write},
+    {Zpopmin,           "zpopmin",          2,  3,         Write},
     {Zrange,            "zrange",           4,  5,         Read},
     {Zrangebylex,       "zrangebylex",      4,  7,         Read},
     {Zrangebyscore,     "zrangebyscore",    4,  8,         Read},

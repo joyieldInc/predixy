@@ -391,7 +391,7 @@ Cases = [
         [('scard', '{k}2'), 3],
     ]),
     ('zset', [
-        [('del', 'k', '{k}2', '{k}3', '{k}4'), ],
+        [('del', 'k', '{k}2', '{k}3', '{k}4', '{k}5', '{k}6'), ],
         [('zadd', 'k', 10, 'apple'), 1],
         [('zcard', 'k'), 1],
         [('zincrby', 'k', 2, 'apple'), '12'],
@@ -438,6 +438,12 @@ Cases = [
         [('zunionstore', '{k}3', 2, 'k', '{k}2'), 4],
         [('zunionstore', '{k}3', 2, 'k', '{k}2', 'AGGREGATE', 'MAX'), 4],
         [('zunionstore', '{k}3', 2, 'k', '{k}2', 'WEIGHTS', 0.5, 1.2, 'AGGREGATE', 'MAX'), 4],
+        [('zadd', '{k}5', 0, 'apple', 9, 'banana', 1, 'pear', 3, 'orange', 4, 'cat'), 5],
+        [('zpopmax', '{k}5'), ['banana', '9']],
+        [('zpopmax', '{k}5', 3), ['cat', '4', 'orange', '3', 'pear', '1']],
+        [('zadd', '{k}6', 0, 'apple', 9, 'banana', 1, 'pear', 3, 'orange', 4, 'cat'), 5],
+        [('zpopmin', '{k}6'), ['apple', '0']],
+        [('zpopmin', '{k}6', 3), ['pear', '1', 'orange', '3', 'cat', '4']],
     ]),
     ('hyperloglog', [
         [('del', 'k', '{k}2', '{k}3'), ],
