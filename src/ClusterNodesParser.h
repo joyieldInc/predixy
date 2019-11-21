@@ -62,7 +62,7 @@ public:
             return false;
         }
 
-        const char* host = "";
+        const char* host = mAddr;
         const char* port = strrchr(mAddr, ':');
         if (port) {
             std::string tmp;
