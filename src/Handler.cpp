@@ -617,6 +617,9 @@ bool Handler::preHandleRequest(Request* req, const String& key)
             req->setType(Command::ScriptLoad);
             req->follow(req);
             while (Server* serv = sp->iter(cursor)) {
+                if (serv->fail()) {
+                    continue;
+                }
                 RequestPtr r = RequestAlloc::create();
                 r->follow(req);
                 ConnectConnection* s = getConnectConnection(r, serv);
