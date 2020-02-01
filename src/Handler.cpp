@@ -215,7 +215,6 @@ void Handler::postAcceptConnectionEvent()
                 auto cp = mConnPool[s->server()->id()];
                 s->setStatus(Connection::LogicError);
                 addPostEvent(s, Multiplexor::ErrorEvent);
-                cp->putPrivateConnection(s);
                 c->detachConnectConnection();
                 s->detachAcceptConnection();
             }
@@ -276,6 +275,9 @@ void Handler::postConnectConnectionEvent()
                     s->status(), s->statusStr());
             mEventLoop->delSocket(s);
             s->close(this);
+            if (!s->isShared()) {
+                mConnPool[s->server()->id()]->putPrivateConnection(s);
+            }
             if (c) {
                 addPostEvent(c, Multiplexor::ErrorEvent);
                 s->detachAcceptConnection();
