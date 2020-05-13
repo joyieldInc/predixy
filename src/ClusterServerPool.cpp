@@ -113,9 +113,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
             auto it = mServs.find(addr);
             Server* serv = it == mServs.end() ? nullptr : it->second;
             if (!serv) {
-                if (strstr(p.flags().data(), "myself")) {
-                    serv = s->server();
-                } else if (const char* t = strchr(p.addr().data(), '@')) {
+                if (const char* t = strchr(p.addr().data(), '@')) {
                     addr = String(p.addr().data(), t - p.addr().data());
                     it = mServs.find(addr);
                     serv = it == mServs.end() ? nullptr : it->second;
