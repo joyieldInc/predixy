@@ -1,0 +1,2 @@
+[Unit]
+Description=Predixy is a high performance and fully featured proxy for redis sentinel and redis clusterredis_auth: false

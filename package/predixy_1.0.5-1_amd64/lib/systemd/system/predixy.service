@@ -1,0 +1,12 @@
+Unit]
+Description=Predixy
+After=network.target
+PartOf=prediy.target
+[Service]
+Type=simple
+User=redis
+Group=redis
+PrivateTmp=true
+ExecStart=/usr/bin/predixy /etc/predixy/predixy.conf
+[Install]
+WantedBy=multi-user.target predixy.target
