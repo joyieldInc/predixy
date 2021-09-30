@@ -10,10 +10,10 @@ else ifeq ($(plt), OpenBSD)
 endif
 
 default:
-	@$(make) -C src -f Makefile
+	@$(make) -C src -f Makefile  
 
 debug:
-	@$(make) -C src -f Makefile debug
+	@$(make) -C src -f Makefile debug  
 
 clean:
-	@$(make) -C src -f Makefile clean
+	@$(make) -C src -f Makefile clean 

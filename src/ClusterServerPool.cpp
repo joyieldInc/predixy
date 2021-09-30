@@ -85,22 +85,50 @@ void ClusterServerPool::refreshRequest(Handler* h)
     RequestPtr req = RequestAlloc::create(Request::ClusterNodes);
     h->handleRequest(req);
 }
-
+void ClusterServerPool::removeServer(Server* serv) {
+    if (nullptr == serv) return;
+    logNotice("redis cluster delete old server %s %s %s %s %s",
+                serv->name().data(),
+                serv->addr().data(),
+                serv->roleStr(),
+                serv->masterName().data(),
+                serv->dcName().data());
+    ServerGroup* g = getGroup(serv->name());
+    if (serv->group() && serv->group() != g) {
+        serv->group()->remove(serv);
+    }
+    auto mapServ = mServs.find(serv->addr());
+    if (mapServ != mServs.end())
+    {
+      mServs.erase(mapServ);
+    }
+    delete serv;
+}
 void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request* req, Response* res)
 {
     ClusterNodesParser p;
     p.set(res->body());
     for (auto serv : mServPool) {
         serv->setUpdating(true);
+            logNotice("redis old cluster nodes get node %s %s %s %s",
+              serv->name().data(),
+              serv->addr().data(),
+              serv->roleStr(),
+              serv->masterName().data());
     }
     while (true) {
         ClusterNodesParser::Status st = p.parse();
         if (st == ClusterNodesParser::Node) {
-            logDebug("redis cluster update parse node %s %s %s %s",
-                     p.nodeId().data(),
-                     p.addr().data(),
-                     p.flags().data(),
-                     p.master().data());
+            logNotice("redis update cluster nodes get node %s %s %s %s",
+              p.nodeId().data(),
+              p.addr().data(),
+              p.flags().data(),
+              p.master().data());
+            // logDebug("redis cluster update parse node %s %s %s %s",
+            //          p.nodeId().data(),
+            //          p.addr().data(),
+            //          p.flags().data(),
+            //          p.master().data());
             if (p.addr().empty()) {
                 logWarn("redis cluster nodes get node invalid %s %s %s %s",
                         p.nodeId().data(),
@@ -189,9 +217,13 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
             return;
         }
     }
-    for (auto serv : mServPool) {
+    for (std::vector<Server*>::iterator it = mServPool.begin(); it != mServPool.end();) {
+    //for (auto serv : mServPool) {
+        auto serv = *it;
         if (serv->updating()) {
             serv->setUpdating(false);
+            it = mServPool.erase(it);    //删除不在集群中节点
+            removeServer(serv);
             continue;
         }
         if (serv->role() == Server::Master) {
@@ -229,6 +261,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                 g->remove(serv);
             }
         }
+        ++it;
     }
 }
 
