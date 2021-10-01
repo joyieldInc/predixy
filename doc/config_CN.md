@@ -151,9 +151,9 @@ predixy扩展了redis中AUTH命令的功能，支持定义多个认证密码，�
     Authority {
         Auth [password] {
             Mode read|write|admin
-            [KeyPredix Predix...]
-            [ReadKeyPredix Predix...]
-            [WriteKeyPredix Predix...]
+            [KeyPrefix Prefix...]
+            [ReadKeyPrefix Prefix...]
+            [WriteKeyPrefix Prefix...]
         }...
     }
 
