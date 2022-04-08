@@ -178,6 +178,13 @@ bool Socket::setTcpKeepAlive(int interval)
     if (ret != 0) {
         return false;
     }
+    // Mitigate frozen predixy due to infinite TCP conn retry to a failed Redis cluster node
+    // https://github.com/joyieldInc/predixy/issues/136
+    val = 1000; // millisecond
+    ret = setsockopt(mFd, IPPROTO_TCP, TCP_USER_TIMEOUT, &val, sizeof(val));
+    if (ret != 0) {
+        return false;
+    }
 #else
     ((void)interval); //Avoid unused var warning for non Linux systems
 #endif
