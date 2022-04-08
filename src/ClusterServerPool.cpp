@@ -95,7 +95,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
     }
     while (true) {
         ClusterNodesParser::Status st = p.parse();
-        if (st == ClusterNodesParser::Node) {
+        if (st == ClusterNodesParser::Node) { // it is a node
             logDebug("redis cluster update parse node %s %s %s %s",
                      p.nodeId().data(),
                      p.addr().data(),
@@ -112,8 +112,11 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
             String addr(p.addr());
             auto it = mServs.find(addr);
             Server* serv = it == mServs.end() ? nullptr : it->second;
+            // the raw address is not in our server list, check further for these:
+            // - myself
+            // - if using `@` separator
             if (!serv) {
-                if (strstr(p.flags().data(), "myself")) {
+                if (strstr(p.flags().data(), "myself")) { // the node is where the command get executed
                     serv = s->server();
                 } else if (const char* t = strchr(p.addr().data(), '@')) {
                     addr = String(p.addr().data(), t - p.addr().data());
@@ -121,11 +124,15 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                     serv = it == mServs.end() ? nullptr : it->second;
                 }
             }
+            // still not found in our server list, check further:
+            // - unknown role || fair || handshake -> ignore
+            // - num of server already exceed the pool capacity -> ignore it
+            // if not above, create new server object and add to the mServPool & mServs
             if (!serv) {
                 const char* flags = p.flags().data();
                 if (p.role() == Server::Unknown ||
                     strstr(flags, "fail") || strstr(flags, "handshake")) {
-                    logWarn("redis cluster nodes get node abnormal %s %s %s %s",
+                    logNotice("redis cluster nodes get node abnormal %s %s %s %s",
                             p.nodeId().data(),
                             p.addr().data(),
                             p.flags().data(),
@@ -153,6 +160,9 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
             serv->setRole(p.role());
             serv->setName(p.nodeId());
             serv->setMasterName(p.master());
+            // if it is master
+            // - add group if needed
+            // - add the slot
             if (p.role() == Server::Master) {
                 ServerGroup* g = getGroup(p.nodeId());
                 if (!g) {
@@ -189,6 +199,8 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
             return;
         }
     }
+    // assign to proper group
+    // there is no health check here
     for (auto serv : mServPool) {
         if (serv->updating()) {
             serv->setUpdating(false);

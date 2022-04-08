@@ -47,10 +47,13 @@ bool Server::activate()
     return AtomicCAS(mNextActivateTime, v, now + mPool->serverRetryTimeout());
 }
 
+// increase the fail counter of the server
+// and set status if the fail counter already reach the threshold
 void Server::incrFail()
 {
     long cnt = ++mFailureCnt;
     if (cnt % mPool->serverFailureLimit() == 0) {
+        logError("[ibk]SET FAIL TRUE");
         setFail(true);
     }
 }

@@ -259,7 +259,7 @@ void Handler::postConnectConnectionEvent()
             case Socket::EventError:
                 {
                     Server* serv = s->server();
-                    serv->incrFail();
+                    serv->incrFail(); // increase fail counter only for EventError
                     if (serv->fail()) {
                         logNotice("server %s mark failure", serv->addr().data());
                     }
@@ -1368,7 +1368,7 @@ void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
         if (s && res->isPong()) {
             Server* serv = s->server();
             if (serv->fail()) {
-                serv->setFail(false);
+                serv->setFail(false); // if server respond to ping, mark fail as false. TODO: add for other case like loading
                 logNotice("h %d s %s %d mark server alive",
                         id(), s->peer(), s->fd());
             }
@@ -1382,7 +1382,7 @@ void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
                     id(), s->peer(), s->fd());
         }
         break;
-    case Command::Readonly:
+    case Command::Readonly: // when loading, predixy can detect it here
         if (!res->isOk()) {
             s->setStatus(ConnectConnection::LogicError);
             addPostEvent(s, Multiplexor::ErrorEvent);
