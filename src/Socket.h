@@ -20,6 +20,7 @@
 #include <netdb.h>
 #include <errno.h>
 #include "Exception.h"
+#include "Logger.h"
 
 class Socket
 {
@@ -82,6 +83,7 @@ public:
     const char* statusStr() const;
     void setStatus(int st)
     {
+        logError("ibk: SET_STATUS setStatus %d", st);
         mStatus = st;
     }
     int getEvent() const

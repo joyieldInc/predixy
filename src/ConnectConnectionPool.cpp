@@ -59,6 +59,7 @@ ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
     return c;
 }
 
+// func ini entah dipanggil oleh siapa
 ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
 {
     FuncCallTimer();

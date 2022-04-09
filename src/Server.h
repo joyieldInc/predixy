@@ -106,6 +106,7 @@ public:
     }
     void setFail(bool v)
     {
+        logError("ibk: SET setFail:%d", v);
         mFail = v;
     }
     bool online() const
@@ -114,6 +115,7 @@ public:
     }
     void setOnline(bool v)
     {
+        logError("[ibk: SET_ONLINE SetOnline:%d", v);
         mOnline = v;
     }
     bool updating() const

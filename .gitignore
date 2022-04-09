@@ -1,0 +1,4 @@
+src/*.o
+.idea/
+.vscode/
+src/predixy

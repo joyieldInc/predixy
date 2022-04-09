@@ -69,6 +69,7 @@ Server* ServerGroup::getServer(Handler* h, Request* req) const
     return serv;
 }
 
+// ibk:get the server for the read operation
 Server* ServerGroup::getReadServer(Handler* h) const
 {
     FuncCallTimer();
@@ -80,9 +81,10 @@ Server* ServerGroup::getReadServer(Handler* h) const
     int dprior = 0;
     int pendRequests = INT_MAX;
     int cnt = mServs.size();
+
     for (int i = 0; i < cnt; ++i) {
         Server* s = mServs[i];
-        if (!s->online()) {
+        if (!s->online()) { // make sure it is online
             continue;
         }
         int rp = 0;
@@ -94,6 +96,8 @@ Server* ServerGroup::getReadServer(Handler* h) const
         if (rp <= 0) {
             continue;
         }
+        // ibk: if it is fail:
+        // - put into deadServs list and use another server
         if (s->fail()) {
             if (rp > dprior) {
                 dprior = rp;

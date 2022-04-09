@@ -121,6 +121,7 @@ int Handler::checkServerTimeout(long timeout)
         if (auto req = s->frontRequest()) {
             long elapsed = now - req->createTime();
             if (elapsed >= timeout) {
+                logError("ibk: SET_STATUS TIMEOUT ERROR: %d",Connection::TimeoutError);
                 s->setStatus(Connection::TimeoutError);
                 addPostEvent(s, Multiplexor::ErrorEvent);
                 mWaitConnectConns.remove(s);
@@ -241,7 +242,7 @@ void Handler::postConnectConnectionEvent()
                 if (finished) {
                     ret = mEventLoop->delEvent(s, Multiplexor::WriteEvent);
                 } else {
-                    ret = mEventLoop->addEvent(s, Multiplexor::WriteEvent);
+                    ret = mEventLoop->addEvent(s, Multiplexor::WriteEvent); // ibk: add to the epoll
                 }
                 if (!ret) {
                     s->setStatus(Multiplexor::ErrorEvent);
@@ -259,7 +260,7 @@ void Handler::postConnectConnectionEvent()
             case Socket::EventError:
                 {
                     Server* serv = s->server();
-                    serv->incrFail(); // increase fail counter only for EventError
+                    serv->incrFail(); // ibk:increase fail counter only for EventError, mark as failed if exceed threshold
                     if (serv->fail()) {
                         logNotice("server %s mark failure", serv->addr().data());
                     }
@@ -498,6 +499,9 @@ int Handler::checkClientTimeout(long timeout)
     return num;
 }
 
+// when entering this function, predixy already split multi keys command into multiple commands
+// e.g. client send : mget a b
+// this func will receive `mget a` and `mget b` 
 void Handler::handleRequest(Request* req)
 {
     FuncCallTimer();
@@ -533,6 +537,7 @@ void Handler::handleRequest(Request* req)
     if (s->isShared()) {
         mConnPool[serv->id()]->incrPendRequests();
     }
+    // ibk: these three lines only add the event in the corresponding queues
     s->send(this, req);
     addPostEvent(s, Multiplexor::WriteEvent);
     postHandleRequest(req, s);
@@ -1368,6 +1373,7 @@ void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
         if (s && res->isPong()) {
             Server* serv = s->server();
             if (serv->fail()) {
+                logError("ibk: MARK SERVER NOT FAIL BASED ON THE PING");
                 serv->setFail(false); // if server respond to ping, mark fail as false. TODO: add for other case like loading
                 logNotice("h %d s %s %d mark server alive",
                         id(), s->peer(), s->fd());
