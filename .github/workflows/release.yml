@@ -18,4 +18,8 @@ jobs:
         uses: actions/setup-make@master
       -
         name: Build
-        run: make
+        run: |
+          make
+          mkdir output
+          cp src/predixy output/predixy
+          
