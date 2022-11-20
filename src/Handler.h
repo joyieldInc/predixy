@@ -120,7 +120,7 @@ private:
     std::vector<ConnectConnectionPool*> mConnPool;
     AcceptConnectionDeque mAcceptConns;
     AcceptConnectionList mPostAcceptConns;
-    ConnectConnectionList mPostConnectConns;
+    PostConnectConnectionList mPostConnectConns;
     ConnectConnectionDeque mWaitConnectConns;
     long mStatsVer;
     HandlerStats mStats;

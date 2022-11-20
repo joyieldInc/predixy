@@ -71,7 +71,7 @@ private:
     Server* mServ;
     int mPendRequests;
     std::vector<ConnectConnection*> mShareConns;
-    std::vector<ConnectConnectionList> mPrivateConns;
+    std::vector<PrivateConnectConnectionList> mPrivateConns;
     ServerStats mStats;
     std::vector<LatencyMonitor> mLatencyMonitors;
 };
