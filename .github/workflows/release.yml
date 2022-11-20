@@ -1,0 +1,25 @@
+name: Publish And Deploy Demo # 自动部署的名称
+on:
+  push:
+    branches:
+    - main
+    - master
+    - dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@master
+      -
+        name: Setup Make
+        uses: actions/setup-make@master
+      -
+        name: Build
+        run: |
+          make
+          mkdir output
+          cp src/predixy output/predixy
+          

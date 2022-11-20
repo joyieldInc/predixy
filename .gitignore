@@ -1,0 +1,8 @@
+.idea
+*.o
+CMakeCache.txt
+CMakeFiles/
+output/
+Makefile
+cmake_install.cmake
+src/predixy

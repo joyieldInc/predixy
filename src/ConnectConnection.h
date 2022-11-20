@@ -13,15 +13,23 @@
 #include "Request.h"
 #include "ResponseParser.h"
 
+enum ConnectConnectionListIndex
+{
+    PostConn = 0,
+    PrivateConn,
+
+    ConnListSize
+};
+
 class ConnectConnection :
     public ConnectSocket,
     public Connection,
-    public ListNode<ConnectConnection>,
+    public ListNode<ConnectConnection, ConnectConnection*, ConnectConnectionListIndex::ConnListSize>,
     public DequeNode<ConnectConnection>
 {
 public:
     typedef ConnectConnection Value;
-    typedef ListNode<ConnectConnection> ListNodeType;
+    typedef ListNode<ConnectConnection, ConnectConnection*, ConnectConnectionListIndex::ConnListSize> ListNodeType;
     typedef DequeNode<ConnectConnection> DequeNodeType;
     typedef Alloc<ConnectConnection, Const::ConnectConnectionAllocCacheSize> Allocator;
 public:
@@ -96,7 +104,8 @@ private:
     bool mReadonly;
 };
 
-typedef List<ConnectConnection> ConnectConnectionList;
+typedef List<ConnectConnection, ConnectConnectionListIndex::PostConn> PostConnectConnectionList;
+typedef List<ConnectConnection, ConnectConnectionListIndex::PrivateConn> PrivateConnectConnectionList;
 typedef Deque<ConnectConnection> ConnectConnectionDeque;
 typedef ConnectConnection::Allocator ConnectConnectionAlloc;
 

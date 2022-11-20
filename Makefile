@@ -1,6 +1,3 @@
-
-.PHONY : default debug clean
-
 make = make
 plt = $(shell uname)
 ifeq ($(plt), FreeBSD)
@@ -17,3 +14,5 @@ debug:
 
 clean:
 	@$(make) -C src -f Makefile clean
+
+.PHONY : default debug clean
