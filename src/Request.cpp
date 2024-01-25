@@ -103,6 +103,7 @@ Request::~Request()
 
 void Request::clear()
 {
+    mConn = nullptr;
     mRes = nullptr;
     mHead.clear();
     mReq.clear();
@@ -293,6 +294,7 @@ void Request::follow(Request* leader)
     if (leader == this) {
         return;
     }
+    mConn = leader->mConn;
     mType = leader->mType;
     mHead = leader->mHead;
     mReq = leader->mReq;
