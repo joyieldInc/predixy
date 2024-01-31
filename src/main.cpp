@@ -10,6 +10,7 @@
 
 int main(int argc, char* argv[])
 {
+    printf("this is test ok!");
     try {
         Proxy p;
         if (!p.init(argc, argv)) {

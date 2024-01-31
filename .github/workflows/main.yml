@@ -1,0 +1,65 @@
+name: Publish And Deploy Demo # 自动部署的名称
+#on:
+#  push:
+#    tag: # 当我们提交代码为tag 是以'v'开头的时候才会触发自动部署到服务端 如 git push tag v0.1.0
+#        -v: "v*"
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # 运行环境，告诉它运行在什么环境
+    steps: # 步骤
+
+    # 第一步：下载源码（CI/CD拉取代码到自己的本地）
+    - name: Checkout
+      uses: actions/checkout@master
+
+    # 第二步：打包构建
+    - name: Build
+      uses: actions/setup-make@master
+    - run: make # 安装第三方包
+    - run: tar -zcvf release.tgz conf src/predixy
+      # 把.nuxt、nuxt.config.js等文件，打包压缩为release.tgz
+
+    # 第三步：发布 Release
+    - name: Create Release # 创建Release，可以在仓库看到一个个版本
+      id: create_release
+      uses: actions/create-release@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }} # 之前GitHub添加的Token
+      with:
+        tag_name: ${{ github.ref }} # (tag)标签名称
+        release_name: Release ${{ github.ref }}
+        draft: false # 是否是草稿
+        prerelease: false # 是否是预发布
+
+    # 第四步：上传构建结果到 Release（把打包的tgz上传到Release）
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # 上传地址，通过创建Release获取到的
+        asset_path: ./release.tgz # 要上传文件
+        asset_name: release.tgz # 上传后的文件名
+        asset_content_type: application/x-tgz
+
+    # 第五步：部署到服务器
+    - name: Deploy
+      uses: appleboy/ssh-action@master # 使用ssh链接服务器
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: ${{ secrets.PORT }}
+        script: | # 执行命令（运行到服务器）cd：要确保服务器有这个目录； wget：下载上一步的release到服务器； tar：解压； 安装依赖；启动服务
+          cd /root/realworld-nuxtjs
+          wget https://github.com/YuYun95/realworld-nuxtjs/releases/latest/download/release.tgz -O release.tgz
+          tar zxvf release.tgz
+          npm install --production
+          pm2 reload pm2.config.json

@@ -25,6 +25,7 @@ public:
     {
         return mServPool;
     }
+    void removeServer(Server* srv);
 private:
     Server* getServer(Handler* h, Request* req, const String& key) const;
     void refreshRequest(Handler* h);
