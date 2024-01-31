@@ -177,12 +177,21 @@ void ConnectConnectionPool::check()
     if (!mServ->fail() || !mServ->online()) {
         return;
     }
+    int db = 0;
     if (mServ->activate()) {
-        auto c = mShareConns.empty() ? nullptr : mShareConns[0];
+        auto c = mShareConns.empty() ? nullptr : mShareConns[db];
         if (!c) {
-            return;
+            c = ConnectConnectionAlloc::create(mServ, true);
+            c->setDb(db);
+            ++mStats.connections;
+            mShareConns[db] = c;
+            logNotice("h %d create server connection %s %d", 
+                        mHandler->id(), c->peer(), c->fd());
         }
         if (c->fd() >= 0) {
+            // Force share connections to ping redis when redis is failed.
+            RequestPtr req = RequestAlloc::create(Request::PingServ);
+            mHandler->handleRequest(req, c);
             return;
         }
         c->reopen();
