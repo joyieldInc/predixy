@@ -641,6 +641,7 @@ bool Handler::preHandleRequest(Request* req, const String& key)
         return true;
     case Command::Watch:
     case Command::Multi:
+    case Command::Exec:
         if (!mProxy->supportTransaction()) {
             directResponse(req, Response::ForbidTransaction);
             return true;

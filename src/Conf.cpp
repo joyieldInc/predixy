@@ -35,8 +35,8 @@ bool ServerConf::parse(ServerConf& s, const char* str)
 
 void CustomCommandConf::init(CustomCommandConf&c, const char* name) {
     c.name = name;
-    c.minArgs = 2;
-    c.maxArgs = 2;
+    c.minArgs = 1;
+    c.maxArgs = 1;
     c.mode = Command::Write;
 }
 
@@ -400,8 +400,8 @@ void Conf::setCustomCommand(const ConfParser::Node* node)
         CustomCommandConf::init(cc, p->key.c_str());
         auto s = p->sub;
         for (;s ; s = s->next) {
-            if (setInt(cc.minArgs, "MinArgs", s, 2)) {
-            } else if (setInt(cc.maxArgs, "MaxArgs", s, 2, 9999)) {
+            if (setInt(cc.minArgs, "MinArgs", s, 1)) {
+            } else if (setInt(cc.maxArgs, "MaxArgs", s, 1, 9999)) {
             } else if (setCommandMode(cc.mode, "Mode", s)) {
             } else {
                 Throw(UnknownKey, "%s:%d unknown key %s", s->file, s->line, s->key.c_str());
