@@ -10,6 +10,8 @@
 #include "Buffer.h"
 #include "String.h"
 #include "Server.h"
+#include "arpa/inet.h"
+#include "string.h"
 
 class ClusterNodesParser
 {
@@ -54,6 +56,33 @@ public:
         begin = mSlotBegin;
         end = mSlotEnd;
         return begin >= 0 && begin < end;
+    }
+    bool validAddr() const {
+        if (mAddr.empty()) {
+            return false;
+        }
+
+        const char* host = mAddr.data();
+        const char* port = strrchr(mAddr, ':');
+        if (port) {
+            std::string tmp;
+            tmp.append(mAddr, port - mAddr);
+            host = tmp.c_str();
+        }
+
+        char dst1[INET_ADDRSTRLEN];
+        int isIpv4 = inet_pton(AF_INET, host, dst1);
+        if (isIpv4) {
+            return true;
+        }
+
+        char dst2[INET6_ADDRSTRLEN];
+        int isIpv6 = inet_pton(AF_INET6, host, dst2);
+        if (isIpv6) {
+            return true;
+        }
+
+        return false;
     }
 private:
     enum State

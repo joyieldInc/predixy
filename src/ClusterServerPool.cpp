@@ -101,7 +101,7 @@ void ClusterServerPool::handleResponse(Handler* h, ConnectConnection* s, Request
                      p.addr().data(),
                      p.flags().data(),
                      p.master().data());
-            if (p.addr().empty()) {
+            if (!p.validAddr()) {
                 logWarn("redis cluster nodes get node invalid %s %s %s %s",
                         p.nodeId().data(),
                         p.addr().data(),
