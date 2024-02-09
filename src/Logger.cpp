@@ -188,20 +188,21 @@ LogUnit* Logger::getLogUnit()
         }
     } else {
         std::unique_lock<std::mutex> lck(mMtx);
-        if (!mFree.empty()) {
-            log = mFree.back();
-            mFree.resize(mFree.size() - 1);
-        } else if (mLogUnitCnt < mFree.capacity()) {
-            ++mLogUnitCnt;
-        } else {
-            while (mFree.empty() && !mStop) {
-                mCond.wait(lck);
+        while (true) {
+            if (!mStop) {
+                return nullptr;
             }
             if (!mFree.empty()) {
                 log = mFree.back();
                 mFree.resize(mFree.size() - 1);
+                break;
+            } else if (mLogUnitCnt < mFree.capacity()) {
+                ++mLogUnitCnt;
+                break;
             } else {
-                return nullptr;
+                while (mFree.empty() && !mStop) {
+                    mCond.wait(lck);
+                }
             }
         }
     }
