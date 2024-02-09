@@ -48,6 +48,11 @@ For examples:
     $ make MT=false
     $ make debug MT=false TS=true
 
+To build and create debian package:
+
+    $ make deb
+
+
 ## Install
 
 Just copy src/predixy to the install path

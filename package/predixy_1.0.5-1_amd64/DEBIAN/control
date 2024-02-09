@@ -1,0 +1,6 @@
+Package: predixy
+Version: 1.0.5
+Architecture: amd64
+Maintainer: Drasrax <drasrax@vuln-scan.com>
+Description: Predixy is a high performance and fully featured proxy for redis sentinel and redis cluster
+ Predixy is a high performance and fully featured proxy for redis sentinel and redis cluster
