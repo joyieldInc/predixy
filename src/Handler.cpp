@@ -246,7 +246,8 @@ void Handler::postConnectConnectionEvent()
                 if (!ret) {
                     s->setStatus(Multiplexor::ErrorEvent);
                 } else {
-                    if (s->isShared() && !mWaitConnectConns.exist(s)) {
+                    long timeout = mProxy->serverPool()->serverTimeout();
+                    if (s->isShared() && !mWaitConnectConns.exist(s) && timeout > 0) {
                         mWaitConnectConns.push_back(s);
                     }
                 }
