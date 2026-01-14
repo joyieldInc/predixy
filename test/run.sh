@@ -56,10 +56,14 @@ echo "Running tests..."
 cd "$PROJECT_ROOT"
 
 BASIC_EXIT=0
+PUBSUB_REDIS_EXIT=0
+PUBSUB_MINIMAL_EXIT=0
 PUBSUB_EXIT=0
 
 uv run python3 test/basic.py || BASIC_EXIT=$?
+uv run python3 test/pubsub_minimal.py -p 7617 || PUBSUB_REDIS_EXIT=$?
+uv run python3 test/pubsub_minimal.py -p 6379 || PUBSUB_MINIMAL_EXIT=$?
 uv run python3 test/pubsub.py || PUBSUB_EXIT=$?
 
-TEST_EXIT=$((BASIC_EXIT + PUBSUB_EXIT))
+TEST_EXIT=$((BASIC_EXIT + PUBSUB_REDIS_EXIT + PUBSUB_MINIMAL_EXIT + PUBSUB_EXIT))
 exit $TEST_EXIT
