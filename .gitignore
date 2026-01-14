@@ -1,0 +1,8 @@
+# Object files
+src/*.o
+
+# Binary executable
+src/predixy
+
+# Python virtual environment (uv manages this automatically)
+.venv

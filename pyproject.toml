@@ -1,0 +1,8 @@
+[project]
+name = "predixy"
+version = "1.0.0"
+description = "A high performance and fully featured proxy for redis sentinel and redis cluster"
+requires-python = ">=3.8,<3.14"
+dependencies = [
+    "redis>=5.0.0,<8.0.0",
+]

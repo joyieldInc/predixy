@@ -1,5 +1,5 @@
 
-.PHONY : default debug clean
+.PHONY : default debug clean test
 
 make = make
 plt = $(shell uname)
@@ -17,3 +17,6 @@ debug:
 
 clean:
 	@$(make) -C src -f Makefile clean
+
+test: default
+	@./test/run.sh
