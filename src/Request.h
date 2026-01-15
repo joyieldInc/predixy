@@ -63,7 +63,7 @@ public:
     void setSentinels(const String& master);
     void setSentinelGetMaster(const String& master);
     void setSentinelSlaves(const String& master);
-    void adjustScanCursor(long cursor);
+    void adjustScanCursor(__uint128_t cursor);
     void follow(Request* leader);
     void setResponse(Response* res);
     bool send(Socket* s);

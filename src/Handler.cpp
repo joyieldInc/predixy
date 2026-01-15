@@ -649,10 +649,24 @@ bool Handler::preHandleRequest(Request* req, const String& key)
     case Command::Scan:
         {
             auto sp = mProxy->serverPool();
-            unsigned long cursor = atol(key.data());
-            int groupIdx = cursor & Const::ServGroupMask;
+            // Use 128-bit integer to handle large cursor values
+            __uint128_t cursor = 0;
+            const char* cursorStr = key.data();
+            // Manually parse string to 128-bit integer
+            while (*cursorStr >= '0' && *cursorStr <= '9') {
+                cursor = cursor * 10 + (*cursorStr - '0');
+                cursorStr++;
+            }
+            
+            // Debug log: cursor received from client
+            char cursorBuf[64];
+            Util::uint128ToString(cursor, cursorBuf);
+            
+            int groupIdx = (unsigned long)(cursor & Const::ServGroupMask);
             auto g = sp->getGroup(groupIdx);
             if (!g) {
+                logDebug("h %d SCAN cursor from client: %s (invalid group %d)",
+                        id(), cursorBuf, groupIdx);
                 directResponse(req, Response::InvalidScanCursor);
                 return true;
             }
@@ -661,12 +675,26 @@ bool Handler::preHandleRequest(Request* req, const String& key)
                 serv = g->getMaster();
             }
             if (!serv) {
+                logDebug("h %d SCAN cursor from client: %s (no server available)",
+                        id(), cursorBuf);
                 directResponse(req, Response::ScanEnd);
                 return true;
             }
             if (ConnectConnection* s = getConnectConnection(req, serv)) {
                 if (cursor != 0) {
-                    req->adjustScanCursor(cursor >> Const::ServGroupBits);
+                    __uint128_t actualCursor = cursor >> Const::ServGroupBits;
+                    
+                    // Debug log: cursor to be sent to backend server
+                    char actualCursorBuf[64];
+                    Util::uint128ToString(actualCursor, actualCursorBuf);
+                    
+                    logDebug("h %d SCAN cursor from client: %s, group: %d, cursor to server: %s",
+                            id(), cursorBuf, groupIdx, actualCursorBuf);
+                    
+                    req->adjustScanCursor(actualCursor);
+                } else {
+                    logDebug("h %d SCAN cursor from client: 0, group: %d, cursor to server: 0",
+                            id(), groupIdx);
                 }
                 handleRequest(req, s);
             } else {
@@ -813,21 +841,76 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
         }
     } else if (req->type() == Command::Scan && s && res->type() == Reply::Array) {
         SegmentStr<64> str(res->body());
-        if (const char* p = strchr(str.data() + sizeof("*2\r\n$"), '\n')) {
-            long cursor = atol(p + 1);
-            auto g = s->server()->group();
-            if (cursor != 0 || (g = sp->getGroup(g->id() + 1)) != nullptr) {
-                cursor <<= Const::ServGroupBits;
-                cursor |= g->id();
-                if ((p = strchr(p, '*')) != nullptr) {
-                    char buf[32];
-                    int n = snprintf(buf, sizeof(buf), "%ld", cursor);
-                    res->head().fset(nullptr,
-                            "*2\r\n"
-                            "$%d\r\n"
-                            "%s\r\n",
-                            n, buf);
-                    res->body().cut(p - str.data());
+        // SCAN response format: *2\r\n$<len>\r\n<cursor>\r\n*<count>\r\n...
+        // Skip "*2\r\n$" (5 bytes) and find the first '\n' after the length number
+        // Add boundary check to prevent buffer overflow
+        const char* start = str.data();
+        int len = str.length();
+        if (len >= 5) {
+            const char* end = start + len;
+            const char* p = start + 5;  // Skip "*2\r\n$" (5 bytes, not sizeof which returns 8!)
+            
+            // Find '\n' within buffer boundary (safer than strchr)
+            while (p < end && *p != '\n') {
+                p++;
+            }
+            
+            if (p < end) {  // Found '\n'
+                // Use 128-bit integer to handle large cursor values (Kvrocks may return cursor close to 64-bit limit)
+                __uint128_t cursor = 0;
+                const char* cursorStr = p + 1;
+                const char* cursorStart = cursorStr;
+                
+                // Parse cursor digits within buffer boundary
+                while (cursorStr < end && *cursorStr >= '0' && *cursorStr <= '9') {
+                    cursor = cursor * 10 + (*cursorStr - '0');
+                    cursorStr++;
+                }
+                
+                // Debug log: cursor received from backend server
+                char serverCursorBuf[64];
+                int serverCursorLen = cursorStr - cursorStart;
+                if (serverCursorLen > 0 && serverCursorLen < 64) {
+                    memcpy(serverCursorBuf, cursorStart, serverCursorLen);
+                    serverCursorBuf[serverCursorLen] = '\0';
+                } else {
+                    strcpy(serverCursorBuf, "0");
+                }
+                
+                auto g = s->server()->group();
+                int currentGroupId = g ? g->id() : -1;
+                
+                if (cursor != 0 || (g = sp->getGroup(g->id() + 1)) != nullptr) {
+                    // Use 128-bit integer for left shift, will not overflow
+                    cursor <<= Const::ServGroupBits;
+                    cursor |= g->id();
+                    
+                    // Find '*' within buffer boundary
+                    const char* asteriskPos = p + 1;
+                    while (asteriskPos < end && *asteriskPos != '*') {
+                        asteriskPos++;
+                    }
+                    
+                    if (asteriskPos < end) {  // Found '*'
+                        // Convert 128-bit integer to string
+                        char buf[64];  // 128-bit needs at most 39 decimal digits
+                        int n = Util::uint128ToString(cursor, buf);
+                        
+                        // Debug log: cursor to be sent to client
+                        logDebug("h %d SCAN cursor from server: %s, group: %d, cursor to client: %s",
+                                id(), serverCursorBuf, g->id(), buf);
+                        
+                        res->head().fset(nullptr,
+                                "*2\r\n"
+                                "$%d\r\n"
+                                "%s\r\n",
+                                n, buf);
+                        res->body().cut(asteriskPos - start);
+                    }
+                } else {
+                    // Scan completed, return 0 to client
+                    logDebug("h %d SCAN cursor from server: %s, group: %d, cursor to client: 0 (scan complete)",
+                            id(), serverCursorBuf, currentGroupId);
                 }
             }
         }

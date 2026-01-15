@@ -246,10 +246,10 @@ void Request::setSentinelSlaves(const String& master)
               master.length(), master.length(), master.data());
 }
 
-void Request::adjustScanCursor(long cursor)
+void Request::adjustScanCursor(__uint128_t cursor)
 {
-    char buf[32];
-    int n = snprintf(buf, sizeof(buf), "%ld", cursor);
+    char buf[64];  // 128-bit integer needs at most 39 decimal digits
+    int n = Util::uint128ToString(cursor, buf);
     if (mHead.empty()) {
         SegmentStr<64> str(mReq);
         const char* p = strchr(str.data(), '$');
