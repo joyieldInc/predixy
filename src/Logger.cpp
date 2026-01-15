@@ -122,7 +122,7 @@ void Logger::start()
 
 void Logger::stop()
 {
-    mStop = true;
+    mStop.store(true);
     std::unique_lock<std::mutex> lck(mMtx);
     mCond.notify_one();
 }
@@ -131,11 +131,11 @@ void Logger::run()
 {
     std::vector<LogUnit*> logs(mFree.capacity());
     logs.resize(0);
-    while (!mStop) {
+    while (!mStop.load()) {
         long missLogs = 0;
         do {
             std::unique_lock<std::mutex> lck(mMtx);
-            while (mLogs.empty() && !mStop) {
+            while (mLogs.empty() && !mStop.load()) {
                 mCond.wait(lck);
             }
             logs.swap(mLogs);
@@ -211,7 +211,7 @@ LogUnit* Logger::getLogUnit()
             ++mLogUnitCnt;
             log = new LogUnit();
         } else {
-            while (mFree.empty() && !mStop) {
+            while (mFree.empty() && !mStop.load()) {
                 mCond.wait(lck);
             }
             if (!mFree.empty()) {

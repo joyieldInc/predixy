@@ -101,7 +101,7 @@ private:
     LogUnit* getLogUnit();
     void run();
 private:
-    bool mStop;
+    Atomic<bool> mStop;
     bool mAllowMissLog;
     AtomicLong mMissLogs;
     int mLogSample[LogLevel::Sentinel];
