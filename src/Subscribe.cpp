@@ -41,14 +41,18 @@ SubscribeParser::Status SubscribeParser::parse(const Segment& body, int& chs)
         st = String;
     }
     if (chs < 0) {
-        if (!str.complete()) {
-            Segment tmp(body);
-            tmp.rewind();
-            tmp.cut(body.length() - 12);
-            str.set(tmp);
+        int len = body.length();
+        int tailLen = len < 64 ? len : 64;
+        Segment tmp(body);
+        tmp.rewind();
+        if (len > tailLen) {
+            tmp.use(len - tailLen);
         }
-        const char* p = str.data() + str.length();
-        for (int i = 0; i < str.length(); ++i) {
+        char buf[64 + 1];
+        int n = tmp.dump(buf, tailLen);
+        buf[n] = '\0';
+        const char* p = buf + n;
+        while (p > buf) {
             if (*--p == ':') {
                 chs = atoi(p + 1);
                 break;
