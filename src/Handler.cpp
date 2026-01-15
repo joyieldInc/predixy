@@ -50,7 +50,7 @@ void Handler::run()
     Response::init();
     auto conf = mProxy->conf();
     refreshServerPool();
-    while (!mStop) {
+    while (!mStop.load()) {
         mEventLoop->wait(100000, this);
         postEvent();
         long timeout = conf->clientTimeout();
@@ -78,7 +78,7 @@ void Handler::run()
 
 void Handler::stop()
 {
-    mStop = true;
+    mStop.store(true);
 }
 
 void Handler::refreshServerPool()

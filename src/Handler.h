@@ -12,6 +12,7 @@
 #include "Multiplexor.h"
 #include "Stats.h"
 #include "LatencyMonitor.h"
+#include "Sync.h"
 #include "AcceptConnection.h"
 #include "ConnectConnectionPool.h"
 #include "Proxy.h"
@@ -114,7 +115,7 @@ private:
         mAcceptConns.push_back(c);
     }
 private:
-    bool mStop;
+    Atomic<bool> mStop;
     Proxy* mProxy;
     Multiplexor* mEventLoop;
     std::vector<ConnectConnectionPool*> mConnPool;
