@@ -561,13 +561,77 @@ bool Handler::preHandleRequest(Request* req, const String& key)
         }
         return false;
     }
-    switch (req->type()) {
     if (req->type() == Command::Msetnx && mProxy->isSplitMultiKey()) {
         ResponsePtr res = ResponseAlloc::create();
         res->setErr("msetnx not supported across shards");
         handleResponse(nullptr, req, res);
         return true;
     }
+    if ((req->type() == Command::Eval || req->type() == Command::Evalsha) &&
+        mProxy->isSplitMultiKey()) {
+        SegmentStr<4096> raw(req->body());
+        if (raw.data() && raw.length() > 0 && raw.data()[0] == '*') {
+            int argc = 0;
+            int idx = 1;
+            while (idx < raw.length() && raw.data()[idx] != '\r') {
+                if (raw.data()[idx] < '0' || raw.data()[idx] > '9') {
+                    break;
+                }
+                argc = argc * 10 + (raw.data()[idx++] - '0');
+            }
+            if (argc >= 3) {
+                int argIndex = 0;
+                int pos = raw.data()[idx] == '\r' ? idx + 2 : idx;
+                int numkeys = -1;
+                SString<Const::MaxKeyLen> firstKey;
+                bool haveFirst = false;
+                bool cross = false;
+                auto sp = mProxy->serverPool();
+                while (pos < raw.length() && argIndex < argc) {
+                    if (raw.data()[pos++] != '$') {
+                        break;
+                    }
+                    int blen = 0;
+                    while (pos < raw.length() && raw.data()[pos] != '\r') {
+                        if (raw.data()[pos] < '0' || raw.data()[pos] > '9') {
+                            break;
+                        }
+                        blen = blen * 10 + (raw.data()[pos++] - '0');
+                    }
+                    if (pos + 1 >= raw.length()) {
+                        break;
+                    }
+                    pos += 2; // skip \r\n
+                    if (pos + blen > raw.length()) {
+                        break;
+                    }
+                    const char* dat = raw.data() + pos;
+                    if (argIndex == 2) {
+                        numkeys = atoi(dat);
+                    } else if (argIndex >= 3 && numkeys > 0 &&
+                               argIndex < 3 + numkeys) {
+                        if (!haveFirst) {
+                            firstKey.set(dat, blen);
+                            haveFirst = true;
+                        } else if (sp->getServer(this, req, firstKey) !=
+                                   sp->getServer(this, req, String(dat, blen))) {
+                            cross = true;
+                            break;
+                        }
+                    }
+                    pos += blen + 2; // skip data and \r\n
+                    ++argIndex;
+                }
+                if (cross) {
+                    ResponsePtr res = ResponseAlloc::create();
+                    res->setErr("CROSSSLOT eval keys in different shards");
+                    handleResponse(nullptr, req, res);
+                    return true;
+                }
+            }
+        }
+    }
+    switch (req->type()) {
     case Command::Ping:
     case Command::Echo:
         if (key.empty()) {
@@ -777,13 +841,13 @@ void Handler::directResponse(Request* req, Response::GenericCode code, ConnectCo
 }
 
 void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
+{
+    FuncCallTimer();
     ResponsePtr fallback;
     if (!res) {
         fallback = ResponseAlloc::create(Response::DeliverRequestFail);
         res = fallback;
     }
-{
-    FuncCallTimer();
     SegmentStr<Const::MaxKeyLen> key(req->key());
     logDebug("h %d s %s %d req %ld %s %.*s res %ld %s",
             id(), (s ? s->peer() : "None"), (s ? s->fd() : -1),

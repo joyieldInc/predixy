@@ -67,6 +67,7 @@ PUBSUB_LONG_EXIT=0
 TRANSACTION_FORBID_EXIT=0
 MGET_WRONG_TYPE_EXIT=0
 MSETNX_ATOMICITY_EXIT=0
+EVAL_CROSS_SHARD_EXIT=0
 
 uv run python3 test/basic.py || BASIC_EXIT=$?
 uv run python3 test/pubsub_minimal.py -p 7617 || PUBSUB_REDIS_EXIT=$?
@@ -74,6 +75,7 @@ uv run python3 test/pubsub_minimal.py -p 6379 || PUBSUB_MINIMAL_EXIT=$?
 uv run python3 test/pubsub.py || PUBSUB_EXIT=$?
 uv run python3 test/pubsub_subscription_order.py -p 7617 || PUBSUB_ORDER_EXIT=$?
 uv run python3 test/pubsub_parser_reset.py -p 7617 || PUBSUB_RESET_EXIT=$?
+uv run python3 test/eval_cross_shard.py -p 7617 || EVAL_CROSS_SHARD_EXIT=$?
 uv run python3 test/msetnx_atomicity.py -p 7617 || MSETNX_ATOMICITY_EXIT=$?
 uv run python3 test/mget_wrong_type.py -p 7617 || MGET_WRONG_TYPE_EXIT=$?
 uv run python3 test/transaction_forbid.py -p 7617 || TRANSACTION_FORBID_EXIT=$?
@@ -81,5 +83,5 @@ uv run python3 test/pubsub_long_name.py -p 7617 || PUBSUB_LONG_EXIT=$?
 uv run python3 test/null_response_handling.py -p 7617 || NULL_RESPONSE_EXIT=$?
 uv run python3 test/pubsub_message_response.py -p 7617 || PUBSUB_MESSAGE_EXIT=$?
 
-TEST_EXIT=$((BASIC_EXIT + PUBSUB_REDIS_EXIT + PUBSUB_MINIMAL_EXIT + PUBSUB_EXIT + PUBSUB_MESSAGE_EXIT + PUBSUB_ORDER_EXIT + PUBSUB_RESET_EXIT + NULL_RESPONSE_EXIT + PUBSUB_LONG_EXIT + TRANSACTION_FORBID_EXIT + MGET_WRONG_TYPE_EXIT + MSETNX_ATOMICITY_EXIT))
+TEST_EXIT=$((BASIC_EXIT + PUBSUB_REDIS_EXIT + PUBSUB_MINIMAL_EXIT + PUBSUB_EXIT + PUBSUB_MESSAGE_EXIT + PUBSUB_ORDER_EXIT + PUBSUB_RESET_EXIT + NULL_RESPONSE_EXIT + PUBSUB_LONG_EXIT + TRANSACTION_FORBID_EXIT + MGET_WRONG_TYPE_EXIT + MSETNX_ATOMICITY_EXIT + EVAL_CROSS_SHARD_EXIT))
 exit $TEST_EXIT
