@@ -142,6 +142,7 @@ TESTS=(
     "test/null_response_handling.py"
     "test/request_parser_boundary.py"
     "test/request_parser_error_log.py"
+    "test/response_parser_error_log.py"
     "test/pubsub_long_name.py"
     "test/pubsub_large_message.py"
     "test/transaction_forbid.py"

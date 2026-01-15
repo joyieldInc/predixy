@@ -245,10 +245,12 @@ ResponseParser::Status ResponseParser::parse(Buffer* buf, int& pos)
         SString<64> bufHex;
         bufHex.printHex(buf->data() + pos, buf->length() - pos);
         SString<16> errHex;
-        errHex.printHex(cursor - 1, end - cursor + 1);
+        // Clamp errStart to the buffer head to avoid underflow on first-byte errors.
+        const char* errStart = cursor > buf->data() ? cursor - 1 : cursor;
+        errHex.printHex(errStart, end - errStart);
         logError("response parse error %d state %d buf:%s errpos %d err:%s",
                 error, mState, bufHex.data(),
-                cursor - 1 - buf->data() - pos, errHex.data());
+                (errStart - buf->data()) - pos, errHex.data());
         return ParseError;
     }
     pos = cursor + 1 - buf->data();
