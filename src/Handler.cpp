@@ -543,22 +543,6 @@ bool Handler::preHandleRequest(Request* req, const String& key)
     FuncCallTimer();
     auto c = req->connection();
     if (c && c->inTransaction()) {
-        switch (req->type()) {
-        case Command::Select:
-        case Command::Psubscribe:
-        case Command::Subscribe:
-            {
-                ResponsePtr res = ResponseAlloc::create();
-                char buf[128];
-                snprintf(buf, sizeof(buf), "forbid command \"%s\" in transaction",
-                        req->cmd());
-                res->setErr(buf);
-                handleResponse(nullptr, req, res);
-                return true;
-            }
-        default:
-            break;
-        }
         return false;
     }
     if (req->type() == Command::Msetnx && mProxy->isSplitMultiKey()) {
@@ -910,7 +894,8 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
         res->adjustForLeader(req);
     }
     req->setResponse(res);
-    if (c->send(this, req, res)) {
+    // Always trigger write event for error responses to ensure they're sent immediately
+    if (c->send(this, req, res) || res->isError()) {
         addPostEvent(c, Multiplexor::WriteEvent);
     }
     long elapsed = Util::elapsedUSec() - req->createTime();

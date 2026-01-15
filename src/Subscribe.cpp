@@ -41,21 +41,34 @@ SubscribeParser::Status SubscribeParser::parse(const Segment& body, int& chs)
         st = String;
     }
     if (chs < 0) {
+        // Parse count from the end of the response
+        // Format: *3\r\n$N\r\nsubscribe\r\n$M\r\n<channel>\r\n:<count>\r\n
+        // The count is always the last integer after a colon
         int len = body.length();
-        int tailLen = len < 64 ? len : 64;
+        // Look at the tail, but use a larger buffer for long channel names
+        int tailLen = len < 256 ? len : 256;
         Segment tmp(body);
         tmp.rewind();
         if (len > tailLen) {
             tmp.use(len - tailLen);
         }
-        char buf[64 + 1];
+        char buf[256 + 1];
         int n = tmp.dump(buf, tailLen);
         buf[n] = '\0';
+        // Search backwards for colon followed by digits
         const char* p = buf + n;
         while (p > buf) {
             if (*--p == ':') {
-                chs = atoi(p + 1);
-                break;
+                // Found colon, parse the number after it
+                const char* numStart = p + 1;
+                // Skip whitespace
+                while (*numStart == ' ' || *numStart == '\t') {
+                    numStart++;
+                }
+                if (*numStart >= '0' && *numStart <= '9') {
+                    chs = atoi(numStart);
+                    break;
+                }
             }
         }
     }
