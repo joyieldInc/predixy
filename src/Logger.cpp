@@ -87,6 +87,7 @@ Logger::Logger(int maxLogUnitNum):
     mLogUnitCnt(0),
     mLogs(maxLogUnitNum),
     mFree(maxLogUnitNum),
+    mThread(nullptr),
     mFileSink(nullptr)
 {
     mLogs.resize(0);
