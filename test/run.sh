@@ -145,6 +145,7 @@ TESTS=(
     "test/response_parser_error_log.py"
     "test/request_parser_long_command.py"
     "test/signal_handling.py"
+    "test/buffer_vsnprintf.py"
     "test/pubsub_long_name.py"
     "test/pubsub_large_message.py"
     "test/transaction_forbid.py"

@@ -82,6 +82,10 @@ Buffer* Buffer::fappend(const char* fmt, ...)
     int len = room();
     int n = vsnprintf(dat, len, fmt, ap);
     va_end(ap);
+    if (n < 0) {
+        // Formatting failed; keep buffer length unchanged.
+        return nullptr;
+    }
     if (n >= len) {
         if (n > MaxBufFmtAppendLen) {
             return nullptr;
@@ -104,6 +108,11 @@ Buffer* Buffer::vfappend(const char* fmt, va_list ap)
     va_list aq;
     va_copy(aq, ap);
     int n = vsnprintf(dat, len, fmt, ap);
+    if (n < 0) {
+        // Formatting failed; keep buffer length unchanged.
+        va_end(aq);
+        return nullptr;
+    }
     if (n >= len) {
         if (n > MaxBufFmtAppendLen) {
             va_end(aq);
