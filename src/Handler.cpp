@@ -562,6 +562,12 @@ bool Handler::preHandleRequest(Request* req, const String& key)
         return false;
     }
     switch (req->type()) {
+    if (req->type() == Command::Msetnx && mProxy->isSplitMultiKey()) {
+        ResponsePtr res = ResponseAlloc::create();
+        res->setErr("msetnx not supported across shards");
+        handleResponse(nullptr, req, res);
+        return true;
+    }
     case Command::Ping:
     case Command::Echo:
         if (key.empty()) {
