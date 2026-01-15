@@ -1,3 +1,5 @@
+dump.rdb
+__pycache__/
 # Object files
 src/*.o
 
