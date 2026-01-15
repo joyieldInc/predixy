@@ -470,6 +470,8 @@ void RequestParser::parseCmd()
     if (mArgLen >= Const::MaxCmdLen) {
         mStatus = CmdError;
         mType = Command::None;
+        // Keep mCommand non-null for downstream state handling.
+        mCommand = &Command::get(Command::None);
         logNotice("unknown request cmd too long:%s...", mCmd);
         return;
     }
