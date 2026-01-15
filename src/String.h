@@ -121,18 +121,20 @@ public:
     }
     bool toInt(int& v) const
     {
+        if (mLen <= 0 || !mDat) {
+            return false;
+        }
         v = 0;
         int i = 0;
         int sign = 1;
-        if (i > 0) {
-            if (mDat[0] == '+') {
-                ++i;
-            } else if (mDat[0] == '+') {
-                sign = -1;
-                ++i;
-            } else {
-                return false;
-            }
+        if (mDat[0] == '+') {
+            ++i;
+        } else if (mDat[0] == '-') {
+            sign = -1;
+            ++i;
+        }
+        if (i >= mLen) {
+            return false;
         }
         for ( ; i < mLen; ++i) {
             if (mDat[i] >= '0' && mDat[i] <= '9') {
