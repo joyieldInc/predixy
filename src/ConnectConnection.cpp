@@ -189,6 +189,10 @@ void ConnectConnection::handleResponse(Handler* h)
                     res->set(mParser);
                     req->setResponse(res);
                     mAcceptConnection->append(req);
+                    if (mAcceptConnection->inPendSub()) {
+                        mParser.reset();
+                        return;
+                    }
                     mSentRequests.push_front(req);
                 }
                 break;
