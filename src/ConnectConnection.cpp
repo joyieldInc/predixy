@@ -185,6 +185,9 @@ void ConnectConnection::handleResponse(Handler* h)
                 {
                     RequestPtr req = RequestAlloc::create(mAcceptConnection);
                     req->setType(Command::SubMsg);
+                    ResponsePtr res = ResponseAlloc::create();
+                    res->set(mParser);
+                    req->setResponse(res);
                     mAcceptConnection->append(req);
                     mSentRequests.push_front(req);
                 }
