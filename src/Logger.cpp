@@ -128,8 +128,12 @@ void Logger::run()
                 mCond.wait(lck);
             }
             logs.swap(mLogs);
+#ifndef _PREDIXY_SINGLE_THREAD_
+            missLogs = mMissLogs.exchange(0);
+#else
             missLogs = mMissLogs;
             mMissLogs = 0;
+#endif
         } while (false);
         if (mFileSink) {
             mFileSink->checkRotate();

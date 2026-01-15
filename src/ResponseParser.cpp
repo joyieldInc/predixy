@@ -208,7 +208,12 @@ ResponseParser::Status ResponseParser::parse(Buffer* buf, int& pos)
         case SubStringBody:
             if (mStringCnt + (end - cursor) > mStringLen) {
                 cursor += mStringLen - mStringCnt;
-                *cursor == '\r' ? mState = ElementLF : error = __LINE__;
+                mStringCnt = mStringLen;
+                if (cursor >= end) {
+                    error = __LINE__;
+                } else {
+                    *cursor == '\r' ? mState = ElementLF : error = __LINE__;
+                }
             } else {
                 mStringCnt += end - cursor;
                 cursor = end - 1;

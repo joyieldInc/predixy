@@ -208,6 +208,11 @@ Buffer* Segment::vfset(Buffer* buf, const char* fmt, va_list ap)
     mBegin.buf = buf;
     mBegin.pos = pos;
     mCur = mBegin;
+    if (!nbuf) {
+        // Keep segment empty if formatting fails (e.g., oversized payload).
+        mEnd = mBegin;
+        return nullptr;
+    }
     mEnd.buf = nbuf;
     mEnd.pos = nbuf->length();
     return nbuf;

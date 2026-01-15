@@ -13,6 +13,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include "Sync.h"
 #include "Exception.h"
 
 class LogFileSink;
@@ -98,7 +99,7 @@ private:
 private:
     bool mStop;
     bool mAllowMissLog;
-    long mMissLogs;
+    AtomicLong mMissLogs;
     int mLogSample[LogLevel::Sentinel];
     unsigned mLogUnitCnt;
     std::vector<LogUnit*> mLogs;
@@ -123,9 +124,12 @@ private:
 
 #define logMacroImpl(lvl, fmt, ...) \
     do {                                                                      \
-        if (auto _lu_ = Logger::gInst->log(lvl)) {                    \
-            _lu_->format(lvl, __FILE__, __LINE__, fmt, ##__VA_ARGS__);\
-            Logger::gInst->put(_lu_);                                         \
+        Logger* _logger_ = Logger::gInst;                                     \
+        if (_logger_) {                                                       \
+            if (auto _lu_ = _logger_->log(lvl)) {                             \
+                _lu_->format(lvl, __FILE__, __LINE__, fmt, ##__VA_ARGS__);     \
+                _logger_->put(_lu_);                                          \
+            }                                                                 \
         }                                                                     \
     } while(0)
 

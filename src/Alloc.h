@@ -74,25 +74,40 @@ public:
             logVerb("alloc create object with old memory %d @%p", allocSize<T>(), obj);
             return obj;
         }
-        UsedMemory += allocSize<T>();
+        long size = allocSize<T>();
+        if (MaxMemory == 0) {
+            UsedMemory += size;
+        } else {
+            // Reserve memory atomically to avoid race with other threads.
+            long cur = UsedMemory;
+            while (true) {
+                long next = cur + size;
+                if (next > MaxMemory) {
+                    Throw(MemLimit, "maxmemory used");
+                }
+                if (AtomicCAS(UsedMemory, cur, next)) {
+                    break;
+                }
+            }
+        }
         if (MaxMemory == 0 || UsedMemory <= MaxMemory) {
-            void* p = ::operator new(allocSize<T>(), std::nothrow);
+            void* p = ::operator new(size, std::nothrow);
             if (p) {
                 try {
                     obj = new (p) T(args...);
                     logVerb("alloc create object with new memory %d @%p", allocSize<T>(), obj);
                     return obj;
                 } catch (...) {
-                    UsedMemory -= allocSize<T>();
+                    UsedMemory -= size;
                     ::operator delete(p);
                     throw;
                 }
             } else {
-                UsedMemory -= allocSize<T>();
+                UsedMemory -= size;
                 Throw(MemLimit, "system memory alloc fail");
             }
         } else {
-            UsedMemory -= allocSize<T>();
+            UsedMemory -= size;
             Throw(MemLimit, "maxmemory used");
         }
         return nullptr;
@@ -122,7 +137,7 @@ thread_local T* Alloc<T, CacheSize>::Free[CacheSize];
 template<class T, int CacheSize>
 thread_local int Alloc<T, CacheSize>::Size = 0;
 
-template<class T, class CntType = int>
+template<class T, class CntType = AtomicInt>
 class RefCntObj
 {
 public:
@@ -134,7 +149,11 @@ public:
     RefCntObj& operator=(const RefCntObj&) = delete;
     int count() const
     {
+#ifndef _PREDIXY_SINGLE_THREAD_
+        return mCnt.load();
+#else
         return mCnt;
+#endif
     }
     void ref()
     {
@@ -154,7 +173,11 @@ public:
 protected:
     ~RefCntObj()
     {
+#ifndef _PREDIXY_SINGLE_THREAD_
+        mCnt.store(0);
+#else
         mCnt = 0;
+#endif
     }
 private:
     CntType mCnt;
