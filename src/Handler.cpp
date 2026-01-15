@@ -554,7 +554,6 @@ bool Handler::preHandleRequest(Request* req, const String& key)
                         req->cmd());
                 res->setErr(buf);
                 handleResponse(nullptr, req, res);
-                addPostEvent(c, Multiplexor::ErrorEvent);
                 return true;
             }
         default:
