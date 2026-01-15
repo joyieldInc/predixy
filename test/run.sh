@@ -148,6 +148,7 @@ TESTS=(
     "test/buffer_vsnprintf.py"
     "test/logunit_vsnprintf.py"
     "test/logger_thread_init.py"
+    "test/logger_unbounded_logunit.py"
     "test/pubsub_long_name.py"
     "test/pubsub_large_message.py"
     "test/transaction_forbid.py"

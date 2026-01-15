@@ -92,6 +92,10 @@ public:
     }
     void log(LogLevel::Type lvl, const char* file, int line, const char* fmt, ...);
     int logFileFd() const;
+    unsigned logUnitCount() const
+    {
+        return mLogUnitCnt;
+    }
     static Logger* gInst;
 private:
     LogUnit* getLogUnit();

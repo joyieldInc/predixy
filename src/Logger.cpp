@@ -197,6 +197,7 @@ LogUnit* Logger::getLogUnit()
             mFree.resize(mFree.size() - 1);
         } else if (mLogUnitCnt < mFree.capacity()) {
             ++mLogUnitCnt;
+            log = new LogUnit();
         } else {
             ++mMissLogs;
             return nullptr;
@@ -208,6 +209,7 @@ LogUnit* Logger::getLogUnit()
             mFree.resize(mFree.size() - 1);
         } else if (mLogUnitCnt < mFree.capacity()) {
             ++mLogUnitCnt;
+            log = new LogUnit();
         } else {
             while (mFree.empty() && !mStop) {
                 mCond.wait(lck);
@@ -220,7 +222,7 @@ LogUnit* Logger::getLogUnit()
             }
         }
     }
-    return log ? log : new LogUnit();
+    return log;
 }
 
 int Logger::logFileFd() const
