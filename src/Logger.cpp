@@ -59,6 +59,16 @@ void LogUnit::vformat(LogLevel::Type level, const char* file, int line, const ch
     mLen += n;
     len -= n;
     n = vsnprintf(p, len, fmt, ap);
+    if (n < 0) {
+        // Formatting failed; keep existing prefix and finish the line.
+        if (mLen < MaxLogLen - 1) {
+            mBuf[mLen++] = '\n';
+        } else {
+            mBuf[MaxLogLen - 1] = '\n';
+            mLen = MaxLogLen;
+        }
+        return;
+    }
     mLen += n;
     if (mLen >= MaxLogLen) {
         mLen = MaxLogLen - 1;
