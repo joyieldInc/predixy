@@ -81,6 +81,24 @@ void Handler::stop()
     mStop.store(true);
 }
 
+HandlerStats Handler::snapshotStats() const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mStats;
+}
+
+LatencyMonitor Handler::snapshotLatency(size_t i) const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mLatencyMonitors[i];
+}
+
+size_t Handler::latencyMonitorCount() const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mLatencyMonitors.size();
+}
+
 void Handler::refreshServerPool()
 {
     FuncCallTimer();
@@ -221,7 +239,10 @@ void Handler::postAcceptConnectionEvent()
             mAcceptConns.remove(c);
             c->unref();
             c->close();
+            {
+                std::lock_guard<std::mutex> lck(mStatsMtx);
             --mStats.clientConnections;
+            }
         }
         mPostAcceptConns.pop_front();
     }
@@ -296,7 +317,10 @@ void Handler::handleListenEvent(ListenSocket* s, int evts)
             socklen_t len = sizeof(addr);
             int fd = s->accept((sockaddr*)&addr, &len);
             if (fd >= 0) {
+                {
+                    std::lock_guard<std::mutex> lck(mStatsMtx);
                 ++mStats.accept;
+                }
                 addAcceptSocket(fd, (sockaddr*)&addr, len);
             } else {
                 break;
@@ -355,7 +379,10 @@ void Handler::addAcceptSocket(int fd, sockaddr* addr, socklen_t len)
         if (mEventLoop->addSocket(c)) {
             c->setLastActiveTime(Util::elapsedUSec());
             mAcceptConns.push_back(c);
+            {
+                std::lock_guard<std::mutex> lck(mStatsMtx);
             ++mStats.clientConnections;
+            }
         } else {
             fail = true;
         }
@@ -381,7 +408,10 @@ void Handler::handleAcceptConnectionEvent(AcceptConnection* c, int evts)
     if (c->lastActiveTime() < 0) {
         c->setLastActiveTime(Util::elapsedUSec());
         mAcceptConns.push_back(c);
+        {
+            std::lock_guard<std::mutex> lck(mStatsMtx);
         ++mStats.clientConnections;
+        }
     }
     if (evts & Multiplexor::ErrorEvent) {
         c->setStatus(AcceptConnection::EventError);
@@ -457,7 +487,7 @@ ConnectConnection* Handler::getConnectConnection(Request* req, Server* serv)
         p = new ConnectConnectionPool(this, serv, serv->pool()->dbNum());
         mConnPool[sid] = p;
     }
-    p->stats().requests++;
+    p->incrRequests();
     int db = 0;
     auto c = req->connection();
     if (c) {
@@ -505,7 +535,10 @@ void Handler::handleRequest(Request* req)
     if (c && (c->isBlockRequest() || c->isCloseASAP())) {
         return;
     }
+    {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
     ++mStats.requests;
+    }
     req->setDelivered();
     SegmentStr<Const::MaxKeyLen> key(req->key());
     logDebug("h %d c %s %d handle req %ld %s %.*s",
@@ -793,8 +826,11 @@ void Handler::handleRequest(Request* req, ConnectConnection* s)
     }
     s->send(this, req);
     addPostEvent(s, Multiplexor::WriteEvent);
-    mStats.requests++;
-    mConnPool[s->server()->id()]->stats().requests++;
+    {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
+        ++mStats.requests;
+    }
+    mConnPool[s->server()->id()]->incrRequests();
     if (s->isShared()) {
         mConnPool[s->server()->id()]->incrPendRequests();
     }
@@ -837,9 +873,12 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
             id(), (s ? s->peer() : "None"), (s ? s->fd() : -1),
             req->id(), req->cmd(), key.length(), key.data(),
             res->id(), res->typeStr());
-    mStats.responses++;
+    {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
+        ++mStats.responses;
+    }
     if (s) {
-        mConnPool[s->server()->id()]->stats().responses++;
+        mConnPool[s->server()->id()]->incrResponses();
         if (s->isShared()) {
             mConnPool[s->server()->id()]->decrPendRequests();
         }
@@ -899,16 +938,24 @@ void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
         addPostEvent(c, Multiplexor::WriteEvent);
     }
     long elapsed = Util::elapsedUSec() - req->createTime();
-    if (auto cp = s ? mConnPool[s->server()->id()] : nullptr) {
-        for (auto i : mProxy->latencyMonitorSet().cmdIndex(req->type())) {
-            int idx = mLatencyMonitors[i].add(elapsed);
-            if (idx >= 0) {
-                cp->latencyMonitors()[i].add(elapsed, idx);
+    int cmdType = static_cast<int>(req->type());
+    if (cmdType >= 0 && cmdType < Command::AvailableCommands) {
+        if (auto cp = s ? mConnPool[s->server()->id()] : nullptr) {
+            for (auto i : mProxy->latencyMonitorSet().cmdIndex(req->type())) {
+                int idx = -1;
+                {
+                    std::lock_guard<std::mutex> lck(mStatsMtx);
+                    idx = mLatencyMonitors[i].add(elapsed);
+                }
+                if (idx >= 0) {
+                    cp->addLatency(i, elapsed, idx);
+                }
             }
-        }
-    } else {
-        for (auto i : mProxy->latencyMonitorSet().cmdIndex(req->type())) {
-            mLatencyMonitors[i].add(elapsed);
+        } else {
+            for (auto i : mProxy->latencyMonitorSet().cmdIndex(req->type())) {
+                std::lock_guard<std::mutex> lck(mStatsMtx);
+                mLatencyMonitors[i].add(elapsed);
+            }
         }
     }
     logInfo("RESP h %d c %s %d req %ld %s %.*s s %s %d res %ld %s t %ld",
@@ -1032,12 +1079,12 @@ void Handler::infoRequest(Request* req, const String& key)
     }
 
     if (Scope(all, empty, "Stats")) {
-        HandlerStats st(mStats);
+        HandlerStats st = snapshotStats();
         for (auto h : mProxy->handlers()) {
             if (h == this) {
                 continue;
             }
-            st += h->mStats;
+            st += h->snapshotStats();
         }
         buf = buf->fappend("Accept:%ld\n", st.accept);
         buf = buf->fappend("ClientConnections:%ld\n", st.clientConnections);
@@ -1057,7 +1104,7 @@ void Handler::infoRequest(Request* req, const String& key)
             ServerStats st;
             for (auto h : mProxy->handlers()) {
                 if (auto cp = h->getConnectConnectionPool(serv->id())) {
-                    st += cp->stats();
+                    st += cp->snapshotStats();
                 }
             }
             buf = buf->fappend("Server:%s\n", serv->addr().data());
@@ -1079,15 +1126,21 @@ void Handler::infoRequest(Request* req, const String& key)
 
     if (Scope(all, empty, "LatencyMonitor")) {
         LatencyMonitor lm;
-        for (size_t i = 0; i < mLatencyMonitors.size(); ++i) {
-            lm = mLatencyMonitors[i];
+        size_t count = latencyMonitorCount();
+        for (size_t i = 0; i < count; ++i) {
+            lm = snapshotLatency(i);
             for (auto h : mProxy->handlers()) {
                 if (h == this) {
                     continue;
                 }
-                lm += h->mLatencyMonitors[i];
+                if (i < h->latencyMonitorCount()) {
+                    lm += h->snapshotLatency(i);
+                }
             }
-            buf = buf->fappend("LatencyMonitorName:%s\n", lm.name().data());
+            const char* lmName = lm.name().data();
+            int lmNameLen = lm.name().length();
+            buf = buf->fappend("LatencyMonitorName:%.*s\n",
+                               lmNameLen, lmName ? lmName : "");
             buf = lm.output(buf);
             buf = buf->fappend("\n");
         }
@@ -1123,14 +1176,19 @@ void Handler::infoLatencyRequest(Request* req)
     }
 
     BufferPtr buf = body.fset(nullptr, "# LatencyMonitor\n");
-    LatencyMonitor lm = mLatencyMonitors[i];
+    LatencyMonitor lm = snapshotLatency(i);
     for (auto h : mProxy->handlers()) {
         if (h == this) {
             continue;
         }
-        lm += h->mLatencyMonitors[i];
+        if (i < h->latencyMonitorCount()) {
+            lm += h->snapshotLatency(i);
+        }
     }
-    buf = buf->fappend("LatencyMonitorName:%s\n", lm.name().data());
+    const char* lmName = lm.name().data();
+    int lmNameLen = lm.name().length();
+    buf = buf->fappend("LatencyMonitorName:%.*s\n",
+                       lmNameLen, lmName ? lmName : "");
     buf = lm.output(buf);
     buf = buf->fappend("\n");
 
@@ -1138,15 +1196,19 @@ void Handler::infoLatencyRequest(Request* req)
     auto sp = mProxy->serverPool();
     int servCursor = 0;
     while (Server* serv = sp->iter(servCursor)) {
-        lm = mLatencyMonitors[i];
+        lm = snapshotLatency(i);
         lm.reset();
         for (auto h : mProxy->handlers()) {
             if (auto cp = h->getConnectConnectionPool(serv->id())) {
-                lm += cp->latencyMonitors()[i];
+                if (i < cp->latencyMonitorCount()) {
+                    lm += cp->snapshotLatency(i);
+                }
             }
         }
-        buf = buf->fappend("ServerLatencyMonitorName:%s %s\n",
-                        serv->addr().data(), lm.name().data());
+        const char* lmName = lm.name().data();
+        int lmNameLen = lm.name().length();
+        buf = buf->fappend("ServerLatencyMonitorName:%s %.*s\n",
+                        serv->addr().data(), lmNameLen, lmName ? lmName : "");
         buf = lm.output(buf);
         buf = buf->fappend("\n");
     }
@@ -1197,11 +1259,13 @@ void Handler::infoServerLatencyRequest(Request* req)
             handleResponse(nullptr, req, res);
             return;
         }
-        LatencyMonitor lm = mLatencyMonitors[i];
+        LatencyMonitor lm = snapshotLatency(i);
         lm.reset();
         for (auto h : mProxy->handlers()) {
             if (auto cp = h->getConnectConnectionPool(serv->id())) {
-                lm += cp->latencyMonitors()[i];
+                if (i < cp->latencyMonitorCount()) {
+                    lm += cp->snapshotLatency(i);
+                }
             }
         }
         buf = buf->fappend("ServerLatencyMonitorName:%s %s\n",
@@ -1209,16 +1273,21 @@ void Handler::infoServerLatencyRequest(Request* req)
         buf = lm.output(buf);
         buf = buf->fappend("\n");
     } else {
-        for (size_t i = 0; i < mLatencyMonitors.size(); ++i) {
-            LatencyMonitor lm = mLatencyMonitors[i];
+        size_t count = latencyMonitorCount();
+        for (size_t i = 0; i < count; ++i) {
+            LatencyMonitor lm = snapshotLatency(i);
             lm.reset();
             for (auto h : mProxy->handlers()) {
                 if (auto cp = h->getConnectConnectionPool(serv->id())) {
-                    lm += cp->latencyMonitors()[i];
+                    if (i < cp->latencyMonitorCount()) {
+                        lm += cp->snapshotLatency(i);
+                    }
                 }
             }
-            buf = buf->fappend("ServerLatencyMonitorName:%s %s\n",
-                            serv->addr().data(), lm.name().data());
+            const char* lmName = lm.name().data();
+            int lmNameLen = lm.name().length();
+            buf = buf->fappend("ServerLatencyMonitorName:%s %.*s\n",
+                            serv->addr().data(), lmNameLen, lmName ? lmName : "");
             buf = lm.output(buf);
             buf = buf->fappend("\n");
         }
@@ -1236,9 +1305,12 @@ void Handler::infoServerLatencyRequest(Request* req)
 
 void Handler::resetStats()
 {
-    mStats.reset();
-    for (auto& m : mLatencyMonitors) {
-        m.reset();
+    {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
+        mStats.reset();
+        for (auto& m : mLatencyMonitors) {
+            m.reset();
+        }
     }
     for (auto cp : mConnPool) {
         if (cp) {

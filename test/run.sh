@@ -152,6 +152,7 @@ TESTS=(
     "test/string_to_int.py"
     "test/handler_stop_atomic.py"
     "test/logger_stop_atomic.py"
+    "test/info_concurrent.py"
     "test/pubsub_long_name.py"
     "test/pubsub_large_message.py"
     "test/transaction_forbid.py"

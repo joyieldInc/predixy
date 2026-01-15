@@ -7,6 +7,7 @@
 #ifndef _PREDIXY_CONNECT_CONNECTION_POOL_H_
 #define _PREDIXY_CONNECT_CONNECTION_POOL_H_
 
+#include <mutex>
 #include <vector>
 #include "ConnectConnection.h"
 #include "Server.h"
@@ -41,6 +42,15 @@ public:
     {
         return --mPendRequests;
     }
+    void incrRequests();
+    void incrResponses();
+    void addSendBytes(long num);
+    void addRecvBytes(long num);
+    void addLatency(size_t i, long elapsed);
+    void addLatency(size_t i, long elapsed, int idx);
+    ServerStats snapshotStats() const;
+    LatencyMonitor snapshotLatency(size_t i) const;
+    size_t latencyMonitorCount() const;
     ServerStats& stats()
     {
         return mStats;
@@ -59,6 +69,7 @@ public:
     }
     void resetStats()
     {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
         mStats.reset();
         for (auto& m : mLatencyMonitors) {
             m.reset();
@@ -74,6 +85,7 @@ private:
     std::vector<ConnectConnectionList> mPrivateConns;
     ServerStats mStats;
     std::vector<LatencyMonitor> mLatencyMonitors;
+    mutable std::mutex mStatsMtx;
 };
 
 
