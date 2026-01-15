@@ -4,8 +4,6 @@
 #
 
 import socket
-import sys
-import time
 from test_util import parse_args, make_client, exit_with_result
 
 

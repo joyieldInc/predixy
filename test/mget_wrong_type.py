@@ -3,7 +3,6 @@
 # Verify MGET returns WRONGTYPE for non-string keys
 #
 
-import sys
 from test_util import parse_args, make_client, exit_with_result
 
 

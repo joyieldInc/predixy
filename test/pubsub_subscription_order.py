@@ -3,9 +3,7 @@
 # Verify subscription confirmations arrive before messages
 #
 
-import sys
 from test_util import parse_args, make_clients, exit_with_result
-import time
 
 
 def run_test(host, port):

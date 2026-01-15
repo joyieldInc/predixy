@@ -3,7 +3,6 @@
 # Verify pubsub message responses include message data
 #
 
-import sys
 from test_util import parse_args, make_clients, exit_with_result
 
 

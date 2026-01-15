@@ -3,7 +3,6 @@
 # Verify subscribe/psubscribe confirmation with long channel/pattern names
 #
 
-import sys
 from test_util import parse_args, make_client, exit_with_result
 
 

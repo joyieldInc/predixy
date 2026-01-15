@@ -3,7 +3,6 @@
 # Verify EVAL/EVALSHA rejects multi-key cross-shard scripts
 #
 
-import sys
 from test_util import parse_args, make_client, exit_with_result
 
 

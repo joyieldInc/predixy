@@ -3,7 +3,6 @@
 # Verify MSETNX does not partially apply changes when it returns 0
 #
 
-import sys
 from test_util import parse_args, make_client, exit_with_result
 
 
@@ -14,7 +13,7 @@ def run_test(host, port):
 
     try:
         r = c.execute_command("MSETNX", "msetnx_k1", "v1", "msetnx_k2", "v2")
-    except Exception as exc:
+    except Exception:
         # If proxy rejects cross-shard MSETNX, this is acceptable.
         return True
 

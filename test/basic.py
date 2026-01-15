@@ -6,7 +6,6 @@
 #
 
 import time
-import sys
 import argparse
 from test_util import get_host_port, make_client, exit_with_result
 

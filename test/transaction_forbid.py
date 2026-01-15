@@ -3,7 +3,6 @@
 # Verify forbidden command in transaction returns error without closing connection
 #
 
-import sys
 from test_util import parse_args, make_client, exit_with_result
 
 

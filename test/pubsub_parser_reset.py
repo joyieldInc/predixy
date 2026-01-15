@@ -3,7 +3,6 @@
 # Verify pubsub parser state does not reuse old messages
 #
 
-import sys
 from test_util import parse_args, make_clients, exit_with_result
 
 

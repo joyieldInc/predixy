@@ -70,7 +70,7 @@ def test_redis(host, port):
             return False
     else:
         print(f"   ✗ Expected psubscribe confirmation, got: {msg}")
-        print(f"   This is the bug: old messages are returned instead of new ones")
+        print("   This is the bug: old messages are returned instead of new ones")
         return False
 
 if __name__ == '__main__':
