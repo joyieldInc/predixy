@@ -772,6 +772,11 @@ void Handler::directResponse(Request* req, Response::GenericCode code, ConnectCo
 }
 
 void Handler::handleResponse(ConnectConnection* s, Request* req, Response* res)
+    ResponsePtr fallback;
+    if (!res) {
+        fallback = ResponseAlloc::create(Response::DeliverRequestFail);
+        res = fallback;
+    }
 {
     FuncCallTimer();
     SegmentStr<Const::MaxKeyLen> key(req->key());
