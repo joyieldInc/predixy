@@ -1,6 +1,6 @@
 #!/bin/bash
 # Run predixy tests
-# Starts predixy, runs tests, and stops predixy when done
+# Starts fresh Redis and Predixy instances, runs tests, and stops them when done
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,17 +22,84 @@ if [ ! -f "$PREDIXY_BIN" ]; then
     exit 1
 fi
 
-# Start predixy in the background
-echo "Starting predixy..."
-PREDIXY_PID=$("$PREDIXY_BIN" "$CONFIG_FILE" > /dev/null 2>&1 & echo $!)
+# Check if redis-server is available
+if ! command -v redis-server &> /dev/null; then
+    echo "Error: 'redis-server' command not found"
+    echo "Please install Redis"
+    exit 1
+fi
 
-# Set up trap to ensure predixy is stopped on exit
-trap "echo 'Stopping predixy...'; kill $PREDIXY_PID 2>/dev/null || true; wait $PREDIXY_PID 2>/dev/null || true" EXIT INT TERM
-
-# Wait for predixy to start (check if port is listening)
-PREDIXY_PORT=7617
+# Use fixed ports for test instances
+TEST_REDIS_PORT=6380
+TEST_PREDIXY_PORT=7618
 TIMEOUT=10  # seconds
-echo "Waiting for predixy to start on port $PREDIXY_PORT..."
+
+# Create temporary directory for test configs
+TMP_DIR=$(mktemp -d)
+trap "rm -rf '$TMP_DIR'" EXIT INT TERM
+
+# Cleanup function
+cleanup() {
+    echo "Cleaning up test instances..."
+    if [ -n "$REDIS_PID" ]; then
+        kill $REDIS_PID 2>/dev/null || true
+        wait $REDIS_PID 2>/dev/null || true
+    fi
+    if [ -n "$PREDIXY_PID" ]; then
+        kill $PREDIXY_PID 2>/dev/null || true
+        wait $PREDIXY_PID 2>/dev/null || true
+    fi
+    rm -rf "$TMP_DIR"
+}
+
+# Set up trap to ensure cleanup on exit
+trap cleanup EXIT INT TERM
+
+# Start fresh Redis instance
+echo "Starting fresh Redis on port $TEST_REDIS_PORT..."
+REDIS_PID=$(redis-server --port $TEST_REDIS_PORT --save "" --appendonly no > /dev/null 2>&1 & echo $!)
+if [ -z "$REDIS_PID" ] || ! kill -0 $REDIS_PID 2>/dev/null; then
+    echo "Error: Failed to start Redis"
+    exit 1
+fi
+
+# Wait for Redis to be ready
+echo "Waiting for Redis to start on port $TEST_REDIS_PORT..."
+if ! uv run python3 "$SCRIPT_DIR/wait_for_port.py" localhost $TEST_REDIS_PORT $TIMEOUT; then
+    echo "Error: Redis failed to start"
+    exit 1
+fi
+echo "Redis is ready"
+
+# Create temporary Predixy config pointing to test Redis
+TEST_PREDIXY_CONFIG="$TMP_DIR/predixy_test.conf"
+cat > "$TEST_PREDIXY_CONFIG" <<EOF
+Name PredixyTest
+Bind 0.0.0.0:$TEST_PREDIXY_PORT
+WorkerThreads 1
+ClientTimeout 300
+LogVerbSample 0
+LogDebugSample 0
+LogInfoSample 10000
+LogNoticeSample 1
+LogWarnSample 1
+LogErrorSample 1
+
+Include $PROJECT_ROOT/conf/auth.conf
+
+StandaloneServerPool {
+    RefreshMethod fixed
+    Group test {
+        + 127.0.0.1:$TEST_REDIS_PORT
+    }
+}
+
+Include $PROJECT_ROOT/conf/latency.conf
+EOF
+
+# Start fresh Predixy instance
+echo "Starting fresh Predixy on port $TEST_PREDIXY_PORT..."
+PREDIXY_PID=$("$PREDIXY_BIN" "$TEST_PREDIXY_CONFIG" > /dev/null 2>&1 & echo $!)
 
 # Check if process died before waiting for port
 if ! kill -0 $PREDIXY_PID 2>/dev/null; then
@@ -40,48 +107,56 @@ if ! kill -0 $PREDIXY_PID 2>/dev/null; then
     exit 1
 fi
 
-# Wait for port to become available
-if uv run python3 "$SCRIPT_DIR/wait_for_port.py" localhost $PREDIXY_PORT $TIMEOUT; then
-    echo "predixy is ready"
-else
+# Wait for Predixy to start
+echo "Waiting for Predixy to start on port $TEST_PREDIXY_PORT..."
+if ! uv run python3 "$SCRIPT_DIR/wait_for_port.py" localhost $TEST_PREDIXY_PORT $TIMEOUT; then
     # Check if process died during wait
     if ! kill -0 $PREDIXY_PID 2>/dev/null; then
         echo "Error: predixy process died"
     fi
     exit 1
 fi
+echo "Predixy is ready"
 
 # Run tests
 echo "Running tests..."
 cd "$PROJECT_ROOT"
 
-BASIC_EXIT=0
-PUBSUB_REDIS_EXIT=0
-PUBSUB_MINIMAL_EXIT=0
-PUBSUB_EXIT=0
-PUBSUB_MESSAGE_EXIT=0
-PUBSUB_ORDER_EXIT=0
-PUBSUB_RESET_EXIT=0
-NULL_RESPONSE_EXIT=0
-PUBSUB_LONG_EXIT=0
-TRANSACTION_FORBID_EXIT=0
-MGET_WRONG_TYPE_EXIT=0
-MSETNX_ATOMICITY_EXIT=0
-EVAL_CROSS_SHARD_EXIT=0
+TEST_EXIT=0
 
-uv run python3 test/basic.py || BASIC_EXIT=$?
-uv run python3 test/pubsub_minimal.py -p 7617 || PUBSUB_REDIS_EXIT=$?
-uv run python3 test/pubsub_minimal.py -p 6379 || PUBSUB_MINIMAL_EXIT=$?
-uv run python3 test/pubsub.py || PUBSUB_EXIT=$?
-uv run python3 test/pubsub_message_response.py -p 7617 || PUBSUB_MESSAGE_EXIT=$?
-uv run python3 test/pubsub_subscription_order.py -p 7617 || PUBSUB_ORDER_EXIT=$?
-uv run python3 test/pubsub_parser_reset.py -p 7617 || PUBSUB_RESET_EXIT=$?
-uv run python3 test/null_response_handling.py -p 7617 || NULL_RESPONSE_EXIT=$?
-uv run python3 test/pubsub_long_name.py -p 7617 || PUBSUB_LONG_EXIT=$?
-uv run python3 test/transaction_forbid.py -p 7617 || TRANSACTION_FORBID_EXIT=$?
-uv run python3 test/mget_wrong_type.py -p 7617 || MGET_WRONG_TYPE_EXIT=$?
-uv run python3 test/msetnx_atomicity.py -p 7617 || MSETNX_ATOMICITY_EXIT=$?
-uv run python3 test/eval_cross_shard.py -p 7617 || EVAL_CROSS_SHARD_EXIT=$?
+run_test() {
+    local test_file=$1
+    shift
+    local port=$1
+    shift
+    uv run python3 "$test_file" -p "$port" "$@" || TEST_EXIT=$((TEST_EXIT + $?))
+}
 
-TEST_EXIT=$((BASIC_EXIT + PUBSUB_REDIS_EXIT + PUBSUB_MINIMAL_EXIT + PUBSUB_EXIT + PUBSUB_MESSAGE_EXIT + PUBSUB_ORDER_EXIT + PUBSUB_RESET_EXIT + NULL_RESPONSE_EXIT + PUBSUB_LONG_EXIT + TRANSACTION_FORBID_EXIT + MGET_WRONG_TYPE_EXIT + MSETNX_ATOMICITY_EXIT + EVAL_CROSS_SHARD_EXIT))
+TESTS=(
+    "test/basic.py"
+    "test/pubsub_minimal.py"
+    "test/pubsub.py"
+    "test/pubsub_message_response.py"
+    "test/pubsub_subscription_order.py"
+    "test/pubsub_parser_reset.py"
+    "test/null_response_handling.py"
+    "test/pubsub_long_name.py"
+    "test/transaction_forbid.py"
+    "test/mget_wrong_type.py"
+    "test/msetnx_atomicity.py"
+    "test/eval_cross_shard.py"
+)
+
+run_tests_for_port() {
+    local port=$1
+    shift
+    echo "Running tests against port $port..."
+    for test_file in "${TESTS[@]}"; do
+        run_test "$test_file" "$port"
+    done
+}
+
+run_tests_for_port $TEST_REDIS_PORT
+run_tests_for_port $TEST_PREDIXY_PORT
+
 exit $TEST_EXIT

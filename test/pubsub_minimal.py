@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # 
 # Minimal test to reproduce pubsub message queueing issue in Predixy
 # Tests pass against Redis (6379) but fail against Predixy (7617)

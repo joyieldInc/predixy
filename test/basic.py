@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # 
 #  predixy - A high performance and full features proxy for redis.
 #  Copyright (C) 2017 Joyield, Inc. <joyield.com@gmail.com>

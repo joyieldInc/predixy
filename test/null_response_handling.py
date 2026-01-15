@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Exercise server write mismatch handling to ensure proxy stays alive
 #

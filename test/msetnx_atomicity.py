@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Verify MSETNX does not partially apply changes when it returns 0
 #

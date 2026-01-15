@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # 
 #  predixy - A high performance and full features proxy for redis.
 #  Copyright (C) 2017 Joyield, Inc. <joyield.com@gmail.com>
@@ -105,7 +105,7 @@ def test():
     for stat in stats:
         if not run(stat):
             succ = False
-        time.sleep(0.2)
+        time.sleep(0.01)
     print('---------------------------------')
     if succ:
         print('Good! PubSub test pass')

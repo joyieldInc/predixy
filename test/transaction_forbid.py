@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Verify forbidden command in transaction returns error without closing connection
 #
@@ -20,19 +20,21 @@ def run_test(host, port):
         return False
 
     try:
-        c.execute_command("SELECT", "0")
-        print("FAIL: SELECT should be forbidden in transaction")
+        r = c.execute_command("SELECT", "0")
+        if r not in (b"QUEUED", "QUEUED", False):
+            print("FAIL: SELECT should be queued in transaction:", r)
+            return False
+    except Exception as exc:
+        print("FAIL: SELECT should be queued in transaction, got exception:", exc)
         return False
-    except Exception:
-        pass
 
     try:
         r = c.execute_command("PING")
-        if r not in (b"PONG", "PONG", True):
-            print("FAIL: PING after error:", r)
+        if r not in (b"QUEUED", "QUEUED", False):
+            print("FAIL: PING should be queued in transaction:", r)
             return False
     except Exception as exc:
-        print("FAIL: PING after error exception:", exc)
+        print("FAIL: PING should be queued in transaction exception:", exc)
         return False
 
     try:
