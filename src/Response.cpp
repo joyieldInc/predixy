@@ -114,6 +114,8 @@ void Response::adjustForLeader(Request* req)
                 if (leader == req) {
                     mHead.fset(nullptr, "*%d\r\n", req->followers());
                 }
+            } else if (mType == Reply::Error) {
+                break;
             } else {
                 mType = Reply::Array;
                 if (leader == req) {
