@@ -444,10 +444,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
         SString<64> bufHex;
         bufHex.printHex(buf->data() + start, buf->length() - start);
         SString<16> errHex;
-        errHex.printHex(cursor - 1, end - cursor + 1);
+        // Clamp errStart to the buffer head to avoid underflow on first-byte errors.
+        const char* errStart = cursor > buf->data() ? cursor - 1 : cursor;
+        errHex.printHex(errStart, end - errStart);
         logDebug("request parse error %d state %d buf:%s errpos %d err:%s",
                 error, mState, bufHex.data(),
-                pos - 1 - start, errHex.data());
+                (errStart - buf->data()) - start, errHex.data());
         return ParseError;
     }
     return Normal;
