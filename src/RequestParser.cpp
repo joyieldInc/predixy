@@ -289,6 +289,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 if (*cursor == '\r') {
                     mState = KeyBodyLF;
                     mKey.end().buf = buf;
@@ -333,6 +339,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 *cursor == '\r' ? mState = ArgBodyLF : error = __LINE__;
             } else {
                 mArgBodyCnt += end - cursor;
@@ -386,6 +398,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 if (*cursor == '\r') {
                     mState = SArgBodyLF;
                     if (isKey(split)) {

@@ -140,6 +140,7 @@ TESTS=(
     "test/pubsub_subscription_order.py"
     "test/pubsub_parser_reset.py"
     "test/null_response_handling.py"
+    "test/request_parser_boundary.py"
     "test/pubsub_long_name.py"
     "test/pubsub_large_message.py"
     "test/transaction_forbid.py"
