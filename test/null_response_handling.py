@@ -3,11 +3,10 @@
 # Exercise server write mismatch handling to ensure proxy stays alive
 #
 
-import argparse
 import socket
 import sys
 import time
-import redis
+from test_util import parse_args, make_client, exit_with_result
 
 
 def run_test(host, port):
@@ -21,7 +20,7 @@ def run_test(host, port):
 
     # Ensure the proxy still accepts connections.
     try:
-        c = redis.StrictRedis(host=host, port=port)
+        c = make_client(host, port)
         if c.ping() is not True:
             print("FAIL: ping did not return True")
             return False
@@ -33,13 +32,7 @@ def run_test(host, port):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(conflict_handler='resolve', description="Null response handling test")
-    parser.add_argument("-h", "--host", default="127.0.0.1")
-    parser.add_argument("-p", "--port", type=int, default=7617)
-    args = parser.parse_args()
-
-    if run_test(args.host, args.port):
-        print("PASS: null response handling")
-        sys.exit(0)
-    print("FAIL: null response handling")
-    sys.exit(1)
+    args = parse_args("Null response handling test")
+    success = run_test(args.host, args.port)
+    exit_with_result(success, "null response handling",
+                     "null response handling")

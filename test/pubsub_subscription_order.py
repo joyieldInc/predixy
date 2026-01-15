@@ -3,15 +3,13 @@
 # Verify subscription confirmations arrive before messages
 #
 
-import argparse
 import sys
-import redis
+from test_util import parse_args, make_clients, exit_with_result
 import time
 
 
 def run_test(host, port):
-    c1 = redis.StrictRedis(host=host, port=port)
-    c2 = redis.StrictRedis(host=host, port=port)
+    c1, c2 = make_clients(host, port, count=2)
 
     ps = c1.pubsub()
     ps.subscribe("ch_order")
@@ -43,13 +41,7 @@ def run_test(host, port):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(conflict_handler='resolve', description="Pubsub subscription order test")
-    parser.add_argument("-h", "--host", default="127.0.0.1")
-    parser.add_argument("-p", "--port", type=int, default=7617)
-    args = parser.parse_args()
-
-    if run_test(args.host, args.port):
-        print("PASS: pubsub subscription order")
-        sys.exit(0)
-    print("FAIL: pubsub subscription order")
-    sys.exit(1)
+    args = parse_args("Pubsub subscription order test")
+    success = run_test(args.host, args.port)
+    exit_with_result(success, "pubsub subscription order",
+                     "pubsub subscription order")

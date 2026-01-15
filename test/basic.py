@@ -6,9 +6,9 @@
 #
 
 import time
-import redis
 import sys
 import argparse
+from test_util import get_host_port, make_client, exit_with_result
 
 c = None
 
@@ -663,9 +663,8 @@ if __name__ == '__main__':
     parser.add_argument('case', nargs='*', default=None, help='specify test case')
     args = parser.parse_args()
     a = set()
-    host = '127.0.0.1' if not args.h else args.h
-    port = 7617 if not args.p else args.p
-    c = redis.StrictRedis(host=host, port=port)
+    host, port = get_host_port(args, host_attr="h", port_attr="p")
+    c = make_client(host, port)
     if args.case:
         a = set(args.case)
     fails = []
@@ -681,10 +680,12 @@ if __name__ == '__main__':
         if not succ:
             fails.append('transaction')
     print('--------------------------------------------')
-    if len(fails) > 0:
+    success = len(fails) == 0
+    if not success:
         print('******* Some case test fail *****')
         for cmd in fails:
             print(cmd)
     else:
         print('Good! all Case Pass.')
+    exit_with_result(success, "basic", "basic")
 

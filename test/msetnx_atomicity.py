@@ -3,13 +3,12 @@
 # Verify MSETNX does not partially apply changes when it returns 0
 #
 
-import argparse
 import sys
-import redis
+from test_util import parse_args, make_client, exit_with_result
 
 
 def run_test(host, port):
-    c = redis.StrictRedis(host=host, port=port)
+    c = make_client(host, port)
     c.delete("msetnx_k1", "msetnx_k2")
     c.set("msetnx_k1", "existing")
 
@@ -31,13 +30,6 @@ def run_test(host, port):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(conflict_handler='resolve', description="MSETNX atomicity test")
-    parser.add_argument("-h", "--host", default="127.0.0.1")
-    parser.add_argument("-p", "--port", type=int, default=7617)
-    args = parser.parse_args()
-
-    if run_test(args.host, args.port):
-        print("PASS: MSETNX atomicity")
-        sys.exit(0)
-    print("FAIL: MSETNX atomicity")
-    sys.exit(1)
+    args = parse_args("MSETNX atomicity test")
+    success = run_test(args.host, args.port)
+    exit_with_result(success, "MSETNX atomicity", "MSETNX atomicity")

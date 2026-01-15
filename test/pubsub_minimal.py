@@ -3,16 +3,14 @@
 # Minimal test to reproduce pubsub message queueing issue in Predixy
 # Tests pass against Redis (6379) but fail against Predixy (7617)
 
-import redis
 import sys
-import argparse
+from test_util import parse_args, make_clients, exit_with_result
 
 def test_redis(host, port):
     """Test pubsub against Redis or Predixy"""
     print(f"\n=== Testing against {host}:{port} ===\n")
     
-    c1 = redis.StrictRedis(host=host, port=port)
-    c2 = redis.StrictRedis(host=host, port=port)
+    c1, c2 = make_clients(host, port, count=2)
     
     ps = c1.pubsub()
     
@@ -76,24 +74,15 @@ def test_redis(host, port):
         return False
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Minimal pubsub test')
-    parser.add_argument('--host', default='127.0.0.1', help='Host (default: 127.0.0.1)')
-    parser.add_argument('-p', '--port', type=int, required=True, help='Port (6379 for Redis, 7617 for Predixy)')
-    args = parser.parse_args()
-    
+    args = parse_args("Minimal pubsub test", require_port=True)
     host = args.host
     port = args.port
     
     try:
         success = test_redis(host, port)
-        if success:
-            print("\n✓ Test PASSED")
-            sys.exit(0)
-        else:
-            print("\n✗ Test FAILED")
-            sys.exit(1)
+        exit_with_result(success, "pubsub minimal", "pubsub minimal")
     except Exception as e:
-        print(f"\n✗ Test ERROR: {e}")
+        print(f"\n🔴 pubsub minimal error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

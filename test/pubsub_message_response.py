@@ -3,9 +3,8 @@
 # Verify pubsub message responses include message data
 #
 
-import argparse
 import sys
-import redis
+from test_util import parse_args, make_clients, exit_with_result
 
 
 def normalize_bytes(value):
@@ -15,8 +14,7 @@ def normalize_bytes(value):
 
 
 def run_test(host, port):
-    c1 = redis.StrictRedis(host=host, port=port)
-    c2 = redis.StrictRedis(host=host, port=port)
+    c1, c2 = make_clients(host, port, count=2)
 
     ps = c1.pubsub()
     ps.subscribe("ch_resp")
@@ -44,13 +42,7 @@ def run_test(host, port):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(conflict_handler='resolve', description="Pubsub message response test")
-    parser.add_argument("-h", "--host", default="127.0.0.1")
-    parser.add_argument("-p", "--port", type=int, default=7617)
-    args = parser.parse_args()
-
-    if run_test(args.host, args.port):
-        print("PASS: pubsub message response")
-        sys.exit(0)
-    print("FAIL: pubsub message response")
-    sys.exit(1)
+    args = parse_args("Pubsub message response test")
+    success = run_test(args.host, args.port)
+    exit_with_result(success, "pubsub message response",
+                     "pubsub message response")

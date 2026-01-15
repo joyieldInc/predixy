@@ -5,9 +5,7 @@
 #  All rights reserved.
 
 import time
-import redis
-import sys
-import argparse
+from test_util import parse_args, make_clients, exit_with_result
 
 c1 = None
 c2 = None
@@ -111,18 +109,16 @@ def test():
         print('Good! PubSub test pass')
     else:
         print('Oh! PubSub some case fail')
+    return succ
 
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(conflict_handler='resolve')
-    parser.add_argument('-h', nargs='?', default='127.0.0.1', help='host')
-    parser.add_argument('-p', nargs='?', default=7617, type=int, help='port')
-    args = parser.parse_args()
-    host = '127.0.0.1' if not args.h else args.h
-    port = 7617 if not args.p else args.p
-    c1 = redis.StrictRedis(host=host, port=port)
-    c2 = redis.StrictRedis(host=host, port=port)
-    test()
+    args = parse_args("PubSub test")
+    host = args.host
+    port = args.port
+    c1, c2 = make_clients(host, port, count=2)
+    success = test()
+    exit_with_result(success, "pubsub", "pubsub")
 
 
