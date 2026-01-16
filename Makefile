@@ -1,5 +1,5 @@
 
-.PHONY : default debug clean test
+.PHONY : default debug clean test lint cppcheck
 
 make = make
 plt = $(shell uname)
@@ -20,3 +20,9 @@ clean:
 
 test: default
 	@./test/run.sh
+
+lint:
+	@$(make) -C src -f Makefile lint
+
+cppcheck:
+	@$(make) -C src -f Makefile cppcheck

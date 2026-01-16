@@ -94,7 +94,25 @@ objs = \
 	 Proxy.o \
 	 main.o
 
-.PHONY : default debug clean
+SRCS = $(objs:.o=.cpp)
+LINT_SRCS ?= $(SRCS)
+
+CLANG_TIDY ?= clang-tidy
+ifeq ($(shell command -v brew 2>/dev/null),)
+	CLANG_TIDY_BREW :=
+else
+	LLVM_PREFIX := $(shell brew --prefix llvm 2>/dev/null)
+	CLANG_TIDY_BREW := $(LLVM_PREFIX)/bin/clang-tidy
+endif
+ifeq ($(shell command -v $(CLANG_TIDY) 2>/dev/null),)
+	CLANG_TIDY_CMD := $(CLANG_TIDY_BREW)
+else
+	CLANG_TIDY_CMD := $(CLANG_TIDY)
+endif
+CPPCHECK ?= cppcheck
+CPPCHECK_FLAGS ?= --std=c++11 --enable=warning,performance,style --suppress=missingIncludeSystem
+
+.PHONY : default debug clean lint cppcheck
 
 default: $(target)
 
@@ -108,6 +126,20 @@ debug:
 clean:
 	@rm -rf $(objs) $(target)
 	@echo Done.
+
+lint:
+	@command -v "$(CLANG_TIDY_CMD)" >/dev/null 2>&1 || { \
+		echo "error: clang-tidy not found; set CLANG_TIDY or install llvm via Homebrew"; \
+		exit 1; \
+	}
+	$(CLANG_TIDY_CMD) $(LINT_SRCS) -- $(CFLAGS) $(INCFLAGS)
+
+cppcheck:
+	@command -v "$(CPPCHECK)" >/dev/null 2>&1 || { \
+		echo "error: cppcheck not found; set CPPCHECK or install cppcheck via Homebrew"; \
+		exit 1; \
+	}
+	$(CPPCHECK) $(CPPCHECK_FLAGS) $(INCFLAGS) $(LINT_SRCS)
 
 %.o : %.cpp
 	$(CXX) $(CFLAGS) -c $^ $(INCFLAGS)
