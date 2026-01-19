@@ -109,7 +109,9 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             break;
         case InlineCmd:
             if (isspace(ch)) {
-                mCmd[mArgLen < Const::MaxCmdLen ? mArgLen : Const::MaxCmdLen - 1] = '\0';
+                // Ensure we don't write out of bounds
+                int idx = (mArgLen >= 0 && mArgLen < Const::MaxCmdLen) ? mArgLen : Const::MaxCmdLen - 1;
+                mCmd[idx] = '\0';
                 parseCmd();
                 mArgCnt = 1;
                 if (ch == '\n') {
@@ -119,7 +121,8 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 }
                 mState = InlineArgBegin;
             } else {
-                if (mArgLen < Const::MaxCmdLen) {
+                // Only write if within bounds
+                if (mArgLen >= 0 && mArgLen < Const::MaxCmdLen) {
                     mCmd[mArgLen] = tolower(ch);
                 }
                 ++mArgLen;
@@ -238,7 +241,8 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 mCmd[Const::MaxCmdLen - 1] = '\0';
                 ch == '\r' ? mState = CmdBodyLF : error = __LINE__;
             } else {
-                if (mArgBodyCnt < Const::MaxCmdLen) {
+                // Only write if within bounds
+                if (mArgBodyCnt >= 0 && mArgBodyCnt < Const::MaxCmdLen) {
                     mCmd[mArgBodyCnt] = ch;
                 }
                 ++mArgBodyCnt;

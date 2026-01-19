@@ -75,6 +75,11 @@ struct StandaloneServerPoolConf : public ServerPoolConf
     std::vector<ServerGroupConf> groups;
 };
 
+// SentinelServerPool uses the same configuration structure as StandaloneServerPool
+struct SentinelServerPoolConf : public StandaloneServerPoolConf
+{
+};
+
 struct ReadPolicyConf
 {
     std::string name;

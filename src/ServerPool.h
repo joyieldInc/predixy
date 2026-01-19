@@ -20,7 +20,8 @@ public:
     {
         Unknown,
         Cluster,
-        Standalone
+        Standalone,
+        Sentinel
     };
     static const int DefaultServerRetryTimeout = 10000000;
     static const int DefaultRefreshInterval = 1000000;

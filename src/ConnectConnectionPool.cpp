@@ -143,6 +143,14 @@ ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
     }
     if (c->fd() < 0) {
         if (mServ->fail()) {
+            // Free the connection if it was newly created before returning
+            if (needInit) {
+                ConnectConnectionAlloc::destroy(c);
+                {
+                    std::lock_guard<std::mutex> lck(mStatsMtx);
+                    --mStats.connections;
+                }
+            }
             return nullptr;
         }
         c->reopen();
@@ -155,7 +163,18 @@ ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
         ccl.push_back(c);
         return nullptr;
     }
-    return mServ->fail() ? nullptr : c;
+    if (mServ->fail()) {
+        // Free the connection if it was newly created before returning
+        if (needInit) {
+            ConnectConnectionAlloc::destroy(c);
+            {
+                std::lock_guard<std::mutex> lck(mStatsMtx);
+                --mStats.connections;
+            }
+        }
+        return nullptr;
+    }
+    return c;
 }
 
 void ConnectConnectionPool::putPrivateConnection(ConnectConnection* s)

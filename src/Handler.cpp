@@ -670,7 +670,9 @@ bool Handler::preHandleRequest(Request* req, const String& key)
             int db = -1;
             if (key.toInt(db)) {
                 if (db >= 0 && db < mProxy->serverPool()->dbNum()) {
-                    c->setDb(db);
+                    if (c) {
+                        c->setDb(db);
+                    }
                     directResponse(req, Response::Ok);
                     return true;
                 }
@@ -1507,26 +1509,32 @@ void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
         break;
     case Command::AuthServ:
         if (!res->isOk()) {
-            s->setStatus(ConnectConnection::LogicError);
-            addPostEvent(s, Multiplexor::ErrorEvent);
-            logWarn("h %d s %s %d auth fail",
-                    id(), s->peer(), s->fd());
+            if (s) {
+                s->setStatus(ConnectConnection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                logWarn("h %d s %s %d auth fail",
+                        id(), s->peer(), s->fd());
+            }
         }
         break;
     case Command::Readonly:
         if (!res->isOk()) {
-            s->setStatus(ConnectConnection::LogicError);
-            addPostEvent(s, Multiplexor::ErrorEvent);
-            logWarn("h %d s %s %d readonly fail",
-                    id(), s->peer(), s->fd());
+            if (s) {
+                s->setStatus(ConnectConnection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                logWarn("h %d s %s %d readonly fail",
+                        id(), s->peer(), s->fd());
+            }
         }
         break;
     case Command::SelectServ:
         if (!res->isOk()) {
-            s->setStatus(ConnectConnection::LogicError);
-            addPostEvent(s, Multiplexor::ErrorEvent);
-            logWarn("h %d s %s %d db select %d fail",
-                    id(), s->peer(), s->fd(), s->db());
+            if (s) {
+                s->setStatus(ConnectConnection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                logWarn("h %d s %s %d db select %d fail",
+                        id(), s->peer(), s->fd(), s->db());
+            }
         }
         break;
     case Command::ClusterNodes:
@@ -1537,18 +1545,22 @@ void Handler::innerResponse(ConnectConnection* s, Request* req, Response* res)
         break;
     case Command::UnwatchServ:
         if (!res->isOk()) {
-            s->setStatus(ConnectConnection::LogicError);
-            addPostEvent(s, Multiplexor::ErrorEvent);
-            logWarn("h %d s %s %d unwatch fail",
-                    id(), s->peer(), s->fd(), s->db());
+            if (s) {
+                s->setStatus(ConnectConnection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                logWarn("h %d s %s %d unwatch fail",
+                        id(), s->peer(), s->fd(), s->db());
+            }
         }
         break;
     case Command::DiscardServ:
         if (!res->isOk()) {
-            s->setStatus(ConnectConnection::LogicError);
-            addPostEvent(s, Multiplexor::ErrorEvent);
-            logWarn("h %d s %s %d discard fail",
-                    id(), s->peer(), s->fd(), s->db());
+            if (s) {
+                s->setStatus(ConnectConnection::LogicError);
+                addPostEvent(s, Multiplexor::ErrorEvent);
+                logWarn("h %d s %s %d discard fail",
+                        id(), s->peer(), s->fd(), s->db());
+            }
         }
         break;
     default:
@@ -1574,7 +1586,7 @@ bool Handler::redirect(ConnectConnection* c, Request* req, Response* res, bool m
         }
     }
     auto p = static_cast<ClusterServerPool*>(mProxy->serverPool());
-    Server* serv = p->redirect(addr, c->server());
+    Server* serv = p->redirect(addr, c ? c->server() : nullptr);
     if (!serv) {
         logDebug("h %d req %ld %s redirect to %s can't get server",
                 id(), req->id(), (moveOrAsk ? "MOVE" : "ASK"), addr.data());

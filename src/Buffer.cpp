@@ -199,12 +199,13 @@ Buffer* Segment::fset(Buffer* buf, const char* fmt, ...)
     va_list ap;
     va_start(ap, fmt);
     try {
-        return vfset(buf, fmt, ap);
+        Buffer* result = vfset(buf, fmt, ap);
+        va_end(ap);
+        return result;
     } catch (...) {
         va_end(ap);
         throw;
     }
-    return nullptr;
 }
 
 Buffer* Segment::vfset(Buffer* buf, const char* fmt, va_list ap)
