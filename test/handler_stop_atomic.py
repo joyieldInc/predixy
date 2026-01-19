@@ -18,18 +18,18 @@ def run_test(project_root):
 
     with tempfile.TemporaryDirectory() as tmp:
         exe = os.path.join(tmp, "handler_stop_atomic")
-    cmd = [
+        cmd = [
             "g++",
             "-std=c++11",
             src,
             "-o",
             exe,
         ]
-    sysname = platform.system()
-    if sysname == "Darwin":
-        cmd.insert(1, "-D_KQUEUE_")
-    elif sysname == "Linux":
-        cmd.insert(1, "-D_EPOLL_")
+        sysname = platform.system()
+        if sysname == "Darwin":
+            cmd.insert(1, "-D_KQUEUE_")
+        elif sysname == "Linux":
+            cmd.insert(1, "-D_EPOLL_")
         try:
             subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as exc:

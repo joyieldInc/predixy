@@ -52,6 +52,14 @@ cleanup() {
     rm -rf "$TMP_DIR"
 }
 
+# Provide context when predixy fails to start.
+dump_predixy_log() {
+    if [ -n "$PREDIXY_LOG" ] && [ -f "$PREDIXY_LOG" ]; then
+        echo "Predixy log output:"
+        tail -n 200 "$PREDIXY_LOG"
+    fi
+}
+
 # Set up trap to ensure cleanup on exit
 trap cleanup EXIT INT TERM
 
@@ -99,11 +107,13 @@ EOF
 
 # Start fresh Predixy instance
 echo "Starting fresh Predixy on port $TEST_PREDIXY_PORT..."
-PREDIXY_PID=$("$PREDIXY_BIN" "$TEST_PREDIXY_CONFIG" > /dev/null 2>&1 & echo $!)
+PREDIXY_LOG="$TMP_DIR/predixy_test.log"
+PREDIXY_PID=$("$PREDIXY_BIN" "$TEST_PREDIXY_CONFIG" > "$PREDIXY_LOG" 2>&1 & echo $!)
 
 # Check if process died before waiting for port
 if ! kill -0 $PREDIXY_PID 2>/dev/null; then
     echo "Error: predixy process died"
+    dump_predixy_log
     exit 1
 fi
 
@@ -113,6 +123,7 @@ if ! uv run python3 "$SCRIPT_DIR/wait_for_port.py" localhost $TEST_PREDIXY_PORT 
     # Check if process died during wait
     if ! kill -0 $PREDIXY_PID 2>/dev/null; then
         echo "Error: predixy process died"
+        dump_predixy_log
     fi
     exit 1
 fi

@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
+#include <ctime>
+#include <time.h>
 
 class String
 {
@@ -246,7 +248,7 @@ public:
     bool strftime(const char* fmt, time_t t)
     {
         struct tm m;
-        localtime_r(&t, &m);
+        ::localtime_r(&t, &m);
         int ret = ::strftime(mBuf, Size, fmt, &m);
         return ret > 0 && ret < Size;
     }
