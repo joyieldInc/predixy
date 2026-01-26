@@ -20,26 +20,23 @@
 #include "RequestParser.h"
 #include "Backtrace.h"
 
-static bool Running = false;
-static bool Abort = false;
-static bool Stop = false;
+static volatile sig_atomic_t Running = 0;
+static volatile sig_atomic_t AbortSignal = 0;
+static volatile sig_atomic_t StopSignal = 0;
 
 static void abortHandler(int sig)
 {
-    if (!Abort) {
-        traceInfo(sig);
-    }
-    Abort = true;
-    if (!Running) {
-        abort();
+    // Signal handlers must be async-signal-safe: only set flags here.
+    if (!AbortSignal) {
+        AbortSignal = sig;
     }
 }
 
 static void stopHandler(int sig)
 {
-    Stop = true;
-    if (!Running) {
-        abort();
+    // Signal handlers must be async-signal-safe: only set flags here.
+    if (!StopSignal) {
+        StopSignal = sig;
     }
 }
 
@@ -141,18 +138,21 @@ int Proxy::run()
     logNotice("predixy running with Name:%s Workers:%d",
             mConf->name(),
             (int)mHandlers.size());
+    Running = 1;
     std::vector<std::shared_ptr<std::thread>> tasks;
     for (auto h : mHandlers) {
         std::shared_ptr<std::thread> t(new std::thread([=](){h->run();}));
         tasks.push_back(t);
     }
-    Running = true;
     bool stop = false;
     while (!stop) {
-        if (Abort) {
+        if (AbortSignal) {
+            int sig = AbortSignal;
+            AbortSignal = 0;
+            traceInfo(sig);
             stop = true;
             abort();
-        } else if (Stop) {
+        } else if (StopSignal) {
             fprintf(stderr, "predixy will quit ASAP Bye!\n");
             stop = true;
         }

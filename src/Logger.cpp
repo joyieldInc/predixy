@@ -59,6 +59,16 @@ void LogUnit::vformat(LogLevel::Type level, const char* file, int line, const ch
     mLen += n;
     len -= n;
     n = vsnprintf(p, len, fmt, ap);
+    if (n < 0) {
+        // Formatting failed; keep existing prefix and finish the line.
+        if (mLen < MaxLogLen - 1) {
+            mBuf[mLen++] = '\n';
+        } else {
+            mBuf[MaxLogLen - 1] = '\n';
+            mLen = MaxLogLen;
+        }
+        return;
+    }
     mLen += n;
     if (mLen >= MaxLogLen) {
         mLen = MaxLogLen - 1;
@@ -77,6 +87,7 @@ Logger::Logger(int maxLogUnitNum):
     mLogUnitCnt(0),
     mLogs(maxLogUnitNum),
     mFree(maxLogUnitNum),
+    mThread(nullptr),
     mFileSink(nullptr)
 {
     mLogs.resize(0);
@@ -111,7 +122,7 @@ void Logger::start()
 
 void Logger::stop()
 {
-    mStop = true;
+    mStop.store(true);
     std::unique_lock<std::mutex> lck(mMtx);
     mCond.notify_one();
 }
@@ -120,16 +131,20 @@ void Logger::run()
 {
     std::vector<LogUnit*> logs(mFree.capacity());
     logs.resize(0);
-    while (!mStop) {
+    while (!mStop.load()) {
         long missLogs = 0;
         do {
             std::unique_lock<std::mutex> lck(mMtx);
-            while (mLogs.empty() && !mStop) {
+            while (mLogs.empty() && !mStop.load()) {
                 mCond.wait(lck);
             }
             logs.swap(mLogs);
+#ifndef _PREDIXY_SINGLE_THREAD_
+            missLogs = mMissLogs.exchange(0);
+#else
             missLogs = mMissLogs;
             mMissLogs = 0;
+#endif
         } while (false);
         if (mFileSink) {
             mFileSink->checkRotate();
@@ -182,6 +197,7 @@ LogUnit* Logger::getLogUnit()
             mFree.resize(mFree.size() - 1);
         } else if (mLogUnitCnt < mFree.capacity()) {
             ++mLogUnitCnt;
+            log = new LogUnit();
         } else {
             ++mMissLogs;
             return nullptr;
@@ -193,8 +209,9 @@ LogUnit* Logger::getLogUnit()
             mFree.resize(mFree.size() - 1);
         } else if (mLogUnitCnt < mFree.capacity()) {
             ++mLogUnitCnt;
+            log = new LogUnit();
         } else {
-            while (mFree.empty() && !mStop) {
+            while (mFree.empty() && !mStop.load()) {
                 mCond.wait(lck);
             }
             if (!mFree.empty()) {
@@ -205,7 +222,7 @@ LogUnit* Logger::getLogUnit()
             }
         }
     }
-    return log ? log : new LogUnit();
+    return log;
 }
 
 int Logger::logFileFd() const

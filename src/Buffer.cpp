@@ -82,6 +82,10 @@ Buffer* Buffer::fappend(const char* fmt, ...)
     int len = room();
     int n = vsnprintf(dat, len, fmt, ap);
     va_end(ap);
+    if (n < 0) {
+        // Formatting failed; keep buffer length unchanged.
+        return nullptr;
+    }
     if (n >= len) {
         if (n > MaxBufFmtAppendLen) {
             return nullptr;
@@ -104,6 +108,11 @@ Buffer* Buffer::vfappend(const char* fmt, va_list ap)
     va_list aq;
     va_copy(aq, ap);
     int n = vsnprintf(dat, len, fmt, ap);
+    if (n < 0) {
+        // Formatting failed; keep buffer length unchanged.
+        va_end(aq);
+        return nullptr;
+    }
     if (n >= len) {
         if (n > MaxBufFmtAppendLen) {
             va_end(aq);
@@ -190,12 +199,13 @@ Buffer* Segment::fset(Buffer* buf, const char* fmt, ...)
     va_list ap;
     va_start(ap, fmt);
     try {
-        return vfset(buf, fmt, ap);
+        Buffer* result = vfset(buf, fmt, ap);
+        va_end(ap);
+        return result;
     } catch (...) {
         va_end(ap);
         throw;
     }
-    return nullptr;
 }
 
 Buffer* Segment::vfset(Buffer* buf, const char* fmt, va_list ap)
@@ -208,6 +218,11 @@ Buffer* Segment::vfset(Buffer* buf, const char* fmt, va_list ap)
     mBegin.buf = buf;
     mBegin.pos = pos;
     mCur = mBegin;
+    if (!nbuf) {
+        // Keep segment empty if formatting fails (e.g., oversized payload).
+        mEnd = mBegin;
+        return nullptr;
+    }
     mEnd.buf = nbuf;
     mEnd.pos = nbuf->length();
     return nbuf;

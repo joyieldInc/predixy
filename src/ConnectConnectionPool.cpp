@@ -22,6 +22,60 @@ ConnectConnectionPool::~ConnectConnectionPool()
 {
 }
 
+void ConnectConnectionPool::incrRequests()
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    ++mStats.requests;
+}
+
+void ConnectConnectionPool::incrResponses()
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    ++mStats.responses;
+}
+
+void ConnectConnectionPool::addSendBytes(long num)
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    mStats.sendBytes += num;
+}
+
+void ConnectConnectionPool::addRecvBytes(long num)
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    mStats.recvBytes += num;
+}
+
+void ConnectConnectionPool::addLatency(size_t i, long elapsed)
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    mLatencyMonitors[i].add(elapsed);
+}
+
+void ConnectConnectionPool::addLatency(size_t i, long elapsed, int idx)
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    mLatencyMonitors[i].add(elapsed, idx);
+}
+
+ServerStats ConnectConnectionPool::snapshotStats() const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mStats;
+}
+
+LatencyMonitor ConnectConnectionPool::snapshotLatency(size_t i) const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mLatencyMonitors[i];
+}
+
+size_t ConnectConnectionPool::latencyMonitorCount() const
+{
+    std::lock_guard<std::mutex> lck(mStatsMtx);
+    return mLatencyMonitors.size();
+}
+
 ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
 {
     FuncCallTimer();
@@ -35,7 +89,10 @@ ConnectConnection* ConnectConnectionPool::getShareConnection(int db)
     if (!c) {
         c = ConnectConnectionAlloc::create(mServ, true);
         c->setDb(db);
-        ++mStats.connections;
+        {
+            std::lock_guard<std::mutex> lck(mStatsMtx);
+            ++mStats.connections;
+        }
         mShareConns[db] = c;
         needInit = true;
         logNotice("h %d create server connection %s %d",
@@ -76,13 +133,24 @@ ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
         }
         c = ConnectConnectionAlloc::create(mServ, false);
         c->setDb(db);
-        ++mStats.connections;
+        {
+            std::lock_guard<std::mutex> lck(mStatsMtx);
+            ++mStats.connections;
+        }
         needInit = true;
         logNotice("h %d create private server connection %s %d",
                   mHandler->id(), c->peer(), c->fd());
     }
     if (c->fd() < 0) {
         if (mServ->fail()) {
+            // Free the connection if it was newly created before returning
+            if (needInit) {
+                ConnectConnectionAlloc::destroy(c);
+                {
+                    std::lock_guard<std::mutex> lck(mStatsMtx);
+                    --mStats.connections;
+                }
+            }
             return nullptr;
         }
         c->reopen();
@@ -95,7 +163,18 @@ ConnectConnection* ConnectConnectionPool::getPrivateConnection(int db)
         ccl.push_back(c);
         return nullptr;
     }
-    return mServ->fail() ? nullptr : c;
+    if (mServ->fail()) {
+        // Free the connection if it was newly created before returning
+        if (needInit) {
+            ConnectConnectionAlloc::destroy(c);
+            {
+                std::lock_guard<std::mutex> lck(mStatsMtx);
+                --mStats.connections;
+            }
+        }
+        return nullptr;
+    }
+    return c;
 }
 
 void ConnectConnectionPool::putPrivateConnection(ConnectConnection* s)
@@ -133,7 +212,10 @@ bool ConnectConnectionPool::init(ConnectConnection* c)
                 mHandler->id(), c->peer(), c->fd());
         return false;
     }
-    ++mStats.connect;
+    {
+        std::lock_guard<std::mutex> lck(mStatsMtx);
+        ++mStats.connect;
+    }
     if (!c->connect()) {
         logWarn("h %d s %s %d connect fail",
                 mHandler->id(), c->peer(), c->fd());

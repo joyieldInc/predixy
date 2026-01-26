@@ -84,6 +84,14 @@ predixy的配置类似redis, 具体配置项的含义在配置文件里有详细
 
     $ src/predixy -h
 
+## 测试
+
+使用 Makefile 目标运行所有测试：
+
+    $ make test
+
+这将自动启动 predixy，运行测试套件，完成后停止 predixy。测试使用 `uv` 进行依赖管理，以确保在不同环境中保持一致的 Python 和包版本。
+
 ## 统计信息
 
 和redis一样，predixy用INFO命令来给出统计信息。

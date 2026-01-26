@@ -7,11 +7,13 @@
 #ifndef _PREDIXY_HANDLER_H_
 #define _PREDIXY_HANDLER_H_
 
+#include <mutex>
 #include <vector>
 #include "Predixy.h"
 #include "Multiplexor.h"
 #include "Stats.h"
 #include "LatencyMonitor.h"
+#include "Sync.h"
 #include "AcceptConnection.h"
 #include "ConnectConnectionPool.h"
 #include "Proxy.h"
@@ -51,6 +53,9 @@ public:
     {
         return mLatencyMonitors;
     }
+    HandlerStats snapshotStats() const;
+    LatencyMonitor snapshotLatency(size_t i) const;
+    size_t latencyMonitorCount() const;
     ConnectConnectionPool* getConnectConnectionPool(int id) const
     {
         return id < (int)mConnPool.size() ? mConnPool[id] : nullptr;
@@ -64,13 +69,19 @@ public:
     }
     void addServerReadStats(Server* serv, int num)
     {
-        mStats.recvServerBytes += num;
-        mConnPool[serv->id()]->stats().recvBytes += num;
+        {
+            std::lock_guard<std::mutex> lck(mStatsMtx);
+            mStats.recvServerBytes += num;
+        }
+        mConnPool[serv->id()]->addRecvBytes(num);
     }
     void addServerWriteStats(Server* serv, int num)
     {
-        mStats.sendServerBytes += num;
-        mConnPool[serv->id()]->stats().sendBytes += num;
+        {
+            std::lock_guard<std::mutex> lck(mStatsMtx);
+            mStats.sendServerBytes += num;
+        }
+        mConnPool[serv->id()]->addSendBytes(num);
     }
     IDUnique& idUnique()
     {
@@ -114,7 +125,7 @@ private:
         mAcceptConns.push_back(c);
     }
 private:
-    bool mStop;
+    Atomic<bool> mStop;
     Proxy* mProxy;
     Multiplexor* mEventLoop;
     std::vector<ConnectConnectionPool*> mConnPool;
@@ -125,6 +136,7 @@ private:
     long mStatsVer;
     HandlerStats mStats;
     std::vector<LatencyMonitor> mLatencyMonitors;
+    mutable std::mutex mStatsMtx;
     IDUnique mIDUnique;
     unsigned int mRandSeed;
 };

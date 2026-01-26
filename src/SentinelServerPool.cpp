@@ -8,6 +8,7 @@
 #include "Logger.h"
 #include "ServerGroup.h"
 #include "Handler.h"
+#include "Conf.h"
 #include "SentinelServerPool.h"
 
 SentinelServerPool::SentinelServerPool(Proxy* p):

@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
+#include <ctime>
+#include <time.h>
 
 class String
 {
@@ -121,18 +123,20 @@ public:
     }
     bool toInt(int& v) const
     {
+        if (mLen <= 0 || !mDat) {
+            return false;
+        }
         v = 0;
         int i = 0;
         int sign = 1;
-        if (i > 0) {
-            if (mDat[0] == '+') {
-                ++i;
-            } else if (mDat[0] == '+') {
-                sign = -1;
-                ++i;
-            } else {
-                return false;
-            }
+        if (mDat[0] == '+') {
+            ++i;
+        } else if (mDat[0] == '-') {
+            sign = -1;
+            ++i;
+        }
+        if (i >= mLen) {
+            return false;
         }
         for ( ; i < mLen; ++i) {
             if (mDat[i] >= '0' && mDat[i] <= '9') {
@@ -244,7 +248,7 @@ public:
     bool strftime(const char* fmt, time_t t)
     {
         struct tm m;
-        localtime_r(&t, &m);
+        ::localtime_r(&t, &m);
         int ret = ::strftime(mBuf, Size, fmt, &m);
         return ret > 0 && ret < Size;
     }

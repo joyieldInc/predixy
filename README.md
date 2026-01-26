@@ -79,6 +79,14 @@ More command line arguments:
 
     $ src/predixy -h
 
+## Testing
+
+Run all tests using the Makefile target:
+
+    $ make test
+
+This will automatically start predixy, run the test suite, and stop predixy when done. The tests use `uv` for dependency management to ensure consistent Python and package versions across environments.
+
 ## Stats
 
 Like redis, predixy use INFO command to give stats.

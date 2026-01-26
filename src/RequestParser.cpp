@@ -109,7 +109,9 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             break;
         case InlineCmd:
             if (isspace(ch)) {
-                mCmd[mArgLen < Const::MaxCmdLen ? mArgLen : Const::MaxCmdLen - 1] = '\0';
+                // Ensure we don't write out of bounds
+                int idx = (mArgLen >= 0 && mArgLen < Const::MaxCmdLen) ? mArgLen : Const::MaxCmdLen - 1;
+                mCmd[idx] = '\0';
                 parseCmd();
                 mArgCnt = 1;
                 if (ch == '\n') {
@@ -119,7 +121,8 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 }
                 mState = InlineArgBegin;
             } else {
-                if (mArgLen < Const::MaxCmdLen) {
+                // Only write if within bounds
+                if (mArgLen >= 0 && mArgLen < Const::MaxCmdLen) {
                     mCmd[mArgLen] = tolower(ch);
                 }
                 ++mArgLen;
@@ -238,7 +241,8 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
                 mCmd[Const::MaxCmdLen - 1] = '\0';
                 ch == '\r' ? mState = CmdBodyLF : error = __LINE__;
             } else {
-                if (mArgBodyCnt < Const::MaxCmdLen) {
+                // Only write if within bounds
+                if (mArgBodyCnt >= 0 && mArgBodyCnt < Const::MaxCmdLen) {
                     mCmd[mArgBodyCnt] = ch;
                 }
                 ++mArgBodyCnt;
@@ -289,6 +293,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 if (*cursor == '\r') {
                     mState = KeyBodyLF;
                     mKey.end().buf = buf;
@@ -333,6 +343,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 *cursor == '\r' ? mState = ArgBodyLF : error = __LINE__;
             } else {
                 mArgBodyCnt += end - cursor;
@@ -386,6 +402,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
             if (mArgBodyCnt + (end - cursor) > mArgLen) {
                 pos += mArgLen - mArgBodyCnt;
                 cursor = buf->data() + pos;
+                if (cursor >= end) {
+                    // CRLF may arrive in the next read; avoid reading past buffer end.
+                    mArgBodyCnt = mArgLen;
+                    pos = buf->length() - 1;
+                    break;
+                }
                 if (*cursor == '\r') {
                     mState = SArgBodyLF;
                     if (isKey(split)) {
@@ -426,10 +448,12 @@ RequestParser::Status RequestParser::parse(Buffer* buf, int& pos, bool split)
         SString<64> bufHex;
         bufHex.printHex(buf->data() + start, buf->length() - start);
         SString<16> errHex;
-        errHex.printHex(cursor - 1, end - cursor + 1);
+        // Clamp errStart to the buffer head to avoid underflow on first-byte errors.
+        const char* errStart = cursor > buf->data() ? cursor - 1 : cursor;
+        errHex.printHex(errStart, end - errStart);
         logDebug("request parse error %d state %d buf:%s errpos %d err:%s",
                 error, mState, bufHex.data(),
-                pos - 1 - start, errHex.data());
+                (errStart - buf->data()) - start, errHex.data());
         return ParseError;
     }
     return Normal;
@@ -450,6 +474,8 @@ void RequestParser::parseCmd()
     if (mArgLen >= Const::MaxCmdLen) {
         mStatus = CmdError;
         mType = Command::None;
+        // Keep mCommand non-null for downstream state handling.
+        mCommand = &Command::get(Command::None);
         logNotice("unknown request cmd too long:%s...", mCmd);
         return;
     }
